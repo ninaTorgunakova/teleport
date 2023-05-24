@@ -1720,6 +1720,12 @@ message AuthPreferenceSpecV2 {
     (gogoproto.jsontag) = "allow_headless,omitempty",
     (gogoproto.customtype) = "BoolOption"
   ];
+
+  // MaxSessionTTL defines how long a session can last for.
+  int64 MaxSessionTTL = 16 [
+    (gogoproto.jsontag) = "max_session_ttl,omitempty",
+    (gogoproto.casttype) = "Duration"
+  ];
 }
 
 // U2F defines settings for U2F device.
