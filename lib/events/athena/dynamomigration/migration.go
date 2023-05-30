@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/ratelimit"
 	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -142,6 +143,8 @@ func newMigrateTask(ctx context.Context, cfg Config) (*task, error) {
 				o.Retryer = retry.NewStandard(func(so *retry.StandardOptions) {
 					so.MaxAttempts = 30
 					so.MaxBackoff = 1 * time.Minute
+					// Use bigger rate limit to handle default sdk throttling: https://github.com/aws/aws-sdk-go-v2/issues/1665
+					so.RateLimiter = ratelimit.NewTokenRateLimit(1000000)
 				})
 			}),
 			Uploader:      manager.NewUploader(s3Client),
