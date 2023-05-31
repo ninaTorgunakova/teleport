@@ -275,16 +275,15 @@ func (t *task) waitForCompletedExport(ctx context.Context, exportARN string) (ex
 		case <-ctx.Done():
 			return "", trace.Wrap(ctx.Err())
 		case <-time.After(10 * time.Second):
-			t.Logger.Debugf("Export job still in progress...")
+			t.Logger.Debug("Export job still in progress...")
 		}
 	}
 }
 
 func (t *task) startExportJob(ctx context.Context) (arn string, err error) {
 	exportOutput, err := t.dynamoClient.ExportTableToPointInTime(ctx, &dynamodb.ExportTableToPointInTimeInput{
-		S3Bucket: aws.String(t.Bucket),
-		TableArn: aws.String(t.DynamoTableARN),
-		// ClientToken:  aws.String(fmt.Sprintf("export-%s", ExportTime.Format(time.DateOnly))),
+		S3Bucket:     aws.String(t.Bucket),
+		TableArn:     aws.String(t.DynamoTableARN),
 		ExportFormat: dynamoTypes.ExportFormatDynamodbJson,
 		ExportTime:   aws.Time(t.ExportTime),
 		S3Prefix:     aws.String(t.Prefix),
@@ -292,7 +291,7 @@ func (t *task) startExportJob(ctx context.Context) (arn string, err error) {
 	if err != nil {
 		return "", trace.Wrap(err)
 	}
-	t.Logger.Infof("Started new export, it can take a while")
+	t.Logger.Info("Started new export")
 	return aws.ToString(exportOutput.ExportDescription.ExportArn), nil
 }
 
@@ -314,7 +313,7 @@ func (t *task) getDataObjectsInfo(ctx context.Context, manifestPath string) ([]d
 		return nil, trace.Wrap(err)
 	}
 
-	out := make([]dataObjectInfo, 0)
+	var out []dataObjectInfo
 	scanner := bufio.NewScanner(bytes.NewBuffer(writeAtBuf.Bytes()))
 	// manifest-files are JSON lines files, that why it's scanned line by line.
 	for scanner.Scan() {
