@@ -35,8 +35,8 @@ func main() {
 	s3exportPath := flag.String("exportPath", "", "S3 address where export should be placed, in format s3://bucket/optional_prefix")
 	snsTopicARN := flag.String("snsTopicARN", "", "SNS topic ARN configured in athena logger")
 	s3largePayloadsPath := flag.String("largePayloadsPath", "", "S3 address configured in athena logger for placing large events payloads, in format s3://bucket/optional_prefix")
-	dryRun := flag.Bool("dryRun", false, "dryRun means export will be triggered and verified, however events won't be published on sns topic")
-	noOfEmitWorker := flag.Int("noOfEmitWorker", 3, "noOfEmitWorker defines number of workers emitting events to athena logger")
+	dryRun := flag.Bool("dryRun", false, "dryRun means export will be triggered and verified, however events won't be published on SNS topic")
+	noOfEmitWorker := flag.Int("noOfEmitWorker", 5, "noOfEmitWorker defines number of workers emitting events to athena logger")
 	debug := flag.Bool("d", false, "debug logs")
 	flag.Parse()
 

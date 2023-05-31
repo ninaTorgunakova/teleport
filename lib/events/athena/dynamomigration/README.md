@@ -1,12 +1,12 @@
 # Dynamomigration tool
 
-Dynamomigration tool allows to export Teleport audit events logs from Dynamo
-table into Athena logger.
-It's using Dynamo export to S3 to export data.
+Dynamomigration tool allows to export Teleport audit events logs from DynamoDB
+table into Athena Audit log.
+It's using DynamoDB export to S3 to export data.
 
 Requirements:
 
-* Point-in-time recovery (PITR) on Dynamo table
+* Point-in-time recovery (PITR) on DynamoDB table
 * IAM permiossions
 TODO(tobiaszheller): add required permissions to run migration.
 
@@ -19,9 +19,8 @@ Dry run to test export:
 ```shell
 ./dynamomigration -dynamoARN='arn:aws:dynamodb:region:account:table/tablename' \
   -exportPath='s3://bucket/prefix' \
-  -noOfEmitWorker=5 \
   -freshnessWindow=24h \
-  -dryRun -d
+  -dryRun
 ```
 
 Full migration:
@@ -29,9 +28,7 @@ Full migration:
 ```shell
 ./dynamomigration -dynamoARN='arn:aws:dynamodb:region:account:table/tablename' \
   -exportPath='s3://bucket/prefix' \
-  -noOfEmitWorker=5 \
   -freshnessWindow=24h \
   -snsTopicARN=arn:aws:sns:region:account:topicname \
-  -largePayloadsPath=s3://bucket/prefix \
-  -d
+  -largePayloadsPath=s3://bucket/prefix
 ```
