@@ -29,9 +29,9 @@ import (
 )
 
 func main() {
-	timeStr := flag.String("exportTime", "", "exportTime is time in the past from which to export table data, empty for time.Now")
-	freshnessWindowStr := flag.String("freshnessWindow", "", "freshnessWindow defines duration if already ongoing or completed exports can be used, format time.Duration")
-	dynamoARN := flag.String("dynamoARN", "", "ARN of dynamo table to export")
+	timeStr := flag.String("exportTime", "", "exportTime is time in the past from which to export table data, empty for the current time")
+	freshnessWindowStr := flag.String("freshnessWindow", "", "freshnessWindow allows to use ongoing/completed exports instead of triggering new one, using for example '24h' will check if there is any export in exportTime-24h")
+	dynamoARN := flag.String("dynamoARN", "", "ARN of DynamoDB table to export")
 	s3exportPath := flag.String("exportPath", "", "S3 address where export should be placed, in format s3://bucket/optional_prefix")
 	snsTopicARN := flag.String("snsTopicARN", "", "SNS topic ARN configured in athena logger")
 	s3largePayloadsPath := flag.String("largePayloadsPath", "", "S3 address configured in athena logger for placing large events payloads, in format s3://bucket/optional_prefix")
