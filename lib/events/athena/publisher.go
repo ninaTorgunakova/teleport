@@ -61,7 +61,7 @@ type s3uploader interface {
 
 type PublisherConfig struct {
 	TopicARN      string
-	SnsPublisher  snsPublisher
+	SNSPublisher  snsPublisher
 	Uploader      s3uploader
 	PayloadBucket string
 	PayloadPrefix string
@@ -83,7 +83,7 @@ func newPublisherFromAthenaConfig(cfg Config) *publisher {
 	})
 	return NewPublisher(PublisherConfig{
 		TopicARN: cfg.TopicARN,
-		SnsPublisher: sns.NewFromConfig(*cfg.AWSConfig, func(o *sns.Options) {
+		SNSPublisher: sns.NewFromConfig(*cfg.AWSConfig, func(o *sns.Options) {
 			o.Retryer = r
 		}),
 		// TODO(tobiaszheller): consider reworking lib/observability to work also on s3 sdk-v2.
@@ -151,7 +151,7 @@ func (p *publisher) emitViaS3(ctx context.Context, uid string, marshaledEvent []
 		return trace.Wrap(err)
 	}
 
-	_, err = p.SnsPublisher.Publish(ctx, &sns.PublishInput{
+	_, err = p.SNSPublisher.Publish(ctx, &sns.PublishInput{
 		TopicArn: aws.String(p.TopicARN),
 		Message:  aws.String(base64.StdEncoding.EncodeToString(buf)),
 		MessageAttributes: map[string]snsTypes.MessageAttributeValue{
@@ -162,7 +162,7 @@ func (p *publisher) emitViaS3(ctx context.Context, uid string, marshaledEvent []
 }
 
 func (p *publisher) emitViaSNS(ctx context.Context, uid string, b64Encoded string) error {
-	_, err := p.SnsPublisher.Publish(ctx, &sns.PublishInput{
+	_, err := p.SNSPublisher.Publish(ctx, &sns.PublishInput{
 		TopicArn: aws.String(p.TopicARN),
 		Message:  aws.String(b64Encoded),
 		MessageAttributes: map[string]snsTypes.MessageAttributeValue{

@@ -294,7 +294,7 @@ func TestPublisherConsumer(t *testing.T) {
 	fq := newFakeQueue()
 	p := &publisher{
 		PublisherConfig: PublisherConfig{
-			SnsPublisher: fq,
+			SNSPublisher: fq,
 			Uploader:     fS3,
 		},
 	}
