@@ -38,14 +38,17 @@ import AddApp from 'teleport/Apps/AddApp';
 
 import { icons } from './icons';
 
-import type { ResourceSpec } from './types';
+import type { ExtraResources, ResourceSpec } from './types';
 import type { AddButtonResourceKind } from 'teleport/components/AgentButtonAdd/AgentButtonAdd';
 
-interface SelectResourceProps {
+interface SelectResourceProps<T = ResourceKind> {
   onSelect: (resource: ResourceSpec) => void;
+  extraResources?: ExtraResources<T>;
 }
 
-export function SelectResource(props: SelectResourceProps) {
+export function SelectResource<T = ResourceKind>(
+  props: SelectResourceProps<T>
+) {
   const ctx = useTeleport();
   const location = useLocation<{ entity: AddButtonResourceKind }>();
   const history = useHistory();
@@ -77,7 +80,10 @@ export function SelectResource(props: SelectResourceProps) {
     // Apply access check to each resource.
     const userContext = ctx.storeUser.state;
     const { acl } = userContext;
-    const updatedResources = makeResourcesWithHasAccessField(acl);
+    const updatedResources = [
+      ...makeResourcesWithHasAccessField(acl),
+      ...[...props.extraResources], // extraResources should already have a populated `hasAccess` field
+    ] as ResourceSpec[];
 
     // Sort resources that user has access to the
     // the top of the list, so it is more visible to
@@ -86,7 +92,8 @@ export function SelectResource(props: SelectResourceProps) {
       ...updatedResources.filter(r => r.hasAccess),
       ...updatedResources.filter(r => !r.hasAccess),
     ];
-    setDefaultResources(filteredResourcesByPerm);
+    const sortedResources = sortResources(filteredResourcesByPerm);
+    setDefaultResources(sortedResources);
 
     // A user can come to this screen by clicking on
     // a `add <specific-resource-type>` button.
@@ -97,11 +104,11 @@ export function SelectResource(props: SelectResourceProps) {
     if (resourceKindSpecifiedByUrlLoc) {
       const sortedResourcesByKind = sortResourcesByKind(
         resourceKindSpecifiedByUrlLoc,
-        filteredResourcesByPerm
+        sortedResources
       );
       onSearch(resourceKindSpecifiedByUrlLoc, sortedResourcesByKind);
     } else {
-      setResources(filteredResourcesByPerm);
+      setResources(sortedResources);
     }
 
     // Processing of the lists should only happen once on init.
@@ -140,7 +147,6 @@ export function SelectResource(props: SelectResourceProps) {
                 resourceCardProps = {
                   onClick: () => {
                     if (r.hasAccess) {
-                      props.onSelect(r);
                       setShowApp(true);
                     }
                   },
@@ -178,9 +184,7 @@ export function SelectResource(props: SelectResourceProps) {
                   )}
                   {!r.hasAccess && (
                     <ToolTipNoPermBadge
-                      children={
-                        <PermissionsErrorMessage resourceKind={r.kind} />
-                      }
+                      children={<PermissionsErrorMessage resource={r} />}
                     />
                   )}
                   <Flex px={2} alignItems="center">
@@ -317,6 +321,25 @@ function sortResourcesByKind(
       break;
   }
   return sorted;
+}
+
+// Sort the resources alphabetically and with the Guided resources listed first.
+function sortResources<T>(resources: ResourceSpec<T>[]) {
+  const sortedResources = [...resources];
+  sortedResources.sort((a, b) => {
+    if (!a.unguidedLink && a.hasAccess && !b.unguidedLink && b.hasAccess) {
+      return a.name.localeCompare(b.name);
+    }
+    if (!b.unguidedLink && b.hasAccess) {
+      return 1;
+    }
+    if (!a.unguidedLink && a.hasAccess) {
+      return -1;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  return sortedResources;
 }
 
 function makeResourcesWithHasAccessField(acl: Acl): ResourceSpec[] {
