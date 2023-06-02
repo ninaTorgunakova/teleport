@@ -53,11 +53,9 @@ import (
 type Config struct {
 	// ExportTime is time in the past from which to export table data.
 	ExportTime time.Time
-	// FreshnessWindow defines if already ongoing or completed exports can be used.
-	// For example if freshness is set to 24h any ongoing/completed export from ExportTime-24h will be used
-	// instead of triggering new.
-	// If no set, new export is triggered.
-	FreshnessWindow time.Duration
+
+	// ExportARN allows to use already finished export without triggering new.
+	ExportARN string
 
 	// DynamoTableARN that will be exported.
 	DynamoTableARN string
@@ -97,8 +95,8 @@ func (cfg *Config) CheckAndSetDefaults() error {
 	if cfg.ExportTime.IsZero() {
 		cfg.ExportTime = time.Now()
 	}
-	if cfg.DynamoTableARN == "" {
-		return trace.BadParameter("missing dynamo table ARN")
+	if cfg.DynamoTableARN == "" && cfg.ExportARN == "" {
+		return trace.BadParameter("either DynamoTableARN or ExportARN is required")
 	}
 	if cfg.Bucket == "" {
 		return trace.BadParameter("missing export bucket")
@@ -198,22 +196,16 @@ func Migrate(ctx context.Context, cfg Config) error {
 // GetOrStartExportAndWaitForResults return export results.
 // It can either reused existing export or start new one, depending on FreshnessWindow.
 func (t *task) GetOrStartExportAndWaitForResults(ctx context.Context) (*exportInfo, error) {
-	var exportArn string
-	var err error
-	if t.FreshnessWindow > 0 {
-		exportArn, err = t.isOngoingOrCompletedExport(ctx)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-	}
-	if exportArn == "" {
-		exportArn, err = t.startExportJob(ctx)
+	exportARN := t.Config.ExportARN
+	if exportARN == "" {
+		var err error
+		exportARN, err = t.startExportJob(ctx)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 	}
 
-	manifest, err := t.waitForCompletedExport(ctx, exportArn)
+	manifest, err := t.waitForCompletedExport(ctx, exportARN)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -224,7 +216,7 @@ func (t *task) GetOrStartExportAndWaitForResults(ctx context.Context) (*exportIn
 		return nil, trace.Wrap(err)
 	}
 	return &exportInfo{
-		ExportARN:       exportArn,
+		ExportARN:       exportARN,
 		DataObjectsInfo: dataObjectsInfo,
 	}, nil
 }
@@ -247,39 +239,6 @@ func (t *task) ProcessDataObjects(ctx context.Context, exportInfo *exportInfo) e
 	})
 
 	return trace.Wrap(eg.Wait())
-}
-
-func (t *task) isOngoingOrCompletedExport(ctx context.Context) (string, error) {
-	// Let's assume that there are not a lot exports and ignore paging at list endpoint.
-	exports, err := t.dynamoClient.ListExports(ctx, &dynamodb.ListExportsInput{
-		MaxResults: aws.Int32(25),
-		TableArn:   aws.String(t.DynamoTableARN),
-	})
-	if err != nil {
-		return "", err
-	}
-	for _, e := range exports.ExportSummaries {
-		switch e.ExportStatus {
-		case dynamoTypes.ExportStatusFailed:
-			continue
-		case dynamoTypes.ExportStatusCompleted, dynamoTypes.ExportStatusInProgress:
-			// check if export is from date that we are intrested.
-			desc, err := t.dynamoClient.DescribeExport(ctx, &dynamodb.DescribeExportInput{
-				ExportArn: e.ExportArn,
-			})
-			if err != nil {
-				continue
-			}
-			if desc.ExportDescription.ExportTime.Sub(t.ExportTime).Abs() > t.FreshnessWindow {
-				// too old, ignore it.
-				continue
-			}
-			// fresh export, return it.
-			t.Logger.Infof("Found fresh export from %v, will use it", desc.ExportDescription.ExportTime)
-			return aws.ToString(e.ExportArn), nil
-		}
-	}
-	return "", nil
 }
 
 func (t *task) waitForCompletedExport(ctx context.Context, exportARN string) (exportManifest string, err error) {

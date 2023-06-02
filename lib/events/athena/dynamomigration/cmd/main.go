@@ -29,8 +29,8 @@ import (
 )
 
 func main() {
-	timeStr := flag.String("exportTime", "", "exportTime is time in the past from which to export table data, empty for the current time")
-	freshnessWindowStr := flag.String("freshnessWindow", "", "freshnessWindow allows to use ongoing/completed exports instead of triggering new one, using for example '24h' will check if there is any export in exportTime-24h")
+	timeStr := flag.String("exportTime", "", "exportTime is time (RFC3339 format) in the past from which to export table data, empty for the current time")
+	exportARN := flag.String("exportARN", "", "exportARN allows to reuse already finished export without triggering new")
 	dynamoARN := flag.String("dynamoARN", "", "ARN of DynamoDB table to export")
 	s3exportPath := flag.String("exportPath", "", "S3 address where export should be placed, in format s3://bucket/optional_prefix")
 	snsTopicARN := flag.String("snsTopicARN", "", "SNS topic ARN configured in athena logger")
@@ -49,6 +49,7 @@ func main() {
 	logger.SetLevel(level)
 
 	cfg := dynamomigration.Config{
+		ExportARN:       *exportARN,
 		DynamoTableARN:  *dynamoARN,
 		DryRun:          *dryRun,
 		NoOfEmitWorkers: *noOfEmitWorker,
@@ -62,12 +63,7 @@ func main() {
 			logger.Fatal(err)
 		}
 	}
-	if *freshnessWindowStr != "" {
-		cfg.FreshnessWindow, err = time.ParseDuration(*freshnessWindowStr)
-		if err != nil {
-			logger.Fatal(err)
-		}
-	}
+
 	if *s3exportPath != "" {
 		u, err := url.Parse(*s3exportPath)
 		if err != nil {

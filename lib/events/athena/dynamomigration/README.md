@@ -17,7 +17,6 @@ Requirements:
             "Sid": "AllowDynamoExportAndList",
             "Effect": "Allow",
             "Action": [
-                "dynamodb:ListExports",
                 "dynamodb:ExportTableToPointInTime"
             ],
             "Resource": "arn:aws:dynamodb:region:account:table/tablename"
