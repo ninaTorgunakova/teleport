@@ -242,10 +242,11 @@ func (t *task) ProcessDataObjects(ctx context.Context, exportInfo *exportInfo) e
 }
 
 func (t *task) waitForCompletedExport(ctx context.Context, exportARN string) (exportManifest string, err error) {
+	req := &dynamodb.DescribeExportInput{
+		ExportArn: aws.String(exportARN),
+	}
 	for {
-		exportStatusOutput, err := t.dynamoClient.DescribeExport(ctx, &dynamodb.DescribeExportInput{
-			ExportArn: aws.String(exportARN),
-		})
+		exportStatusOutput, err := t.dynamoClient.DescribeExport(ctx, req)
 		if err != nil {
 			return "", trace.Wrap(err)
 		}
