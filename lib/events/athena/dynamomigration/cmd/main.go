@@ -37,6 +37,7 @@ func main() {
 	s3largePayloadsPath := flag.String("largePayloadsPath", "", "S3 address configured in athena logger for placing large events payloads, in format s3://bucket/optional_prefix")
 	dryRun := flag.Bool("dryRun", false, "dryRun means export will be triggered and verified, however events won't be published on SNS topic")
 	noOfEmitWorker := flag.Int("noOfEmitWorker", 5, "noOfEmitWorker defines number of workers emitting events to athena logger")
+	checkpointPath := flag.String("checkpointPath", "", "checkpointPath defines where checkpoint file will be stored")
 	debug := flag.Bool("d", false, "debug logs")
 	flag.Parse()
 
@@ -91,6 +92,10 @@ func main() {
 		}
 		cfg.LargePayloadBucket = u.Host
 		cfg.LargePayloadPrefix = strings.TrimSuffix(strings.TrimPrefix(u.Path, "/"), "/")
+	}
+
+	if *checkpointPath != "" {
+		cfg.CheckpointPath = *checkpointPath
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
