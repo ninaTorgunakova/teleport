@@ -250,16 +250,25 @@ func (t *task) waitForCompletedExport(ctx context.Context, exportARN string) (ex
 			return "", trace.Wrap(err)
 		}
 
-		if exportStatusOutput.ExportDescription.ExportStatus == dynamoTypes.ExportStatusCompleted {
-			return *exportStatusOutput.ExportDescription.ExportManifest, nil
+		if exportStatusOutput == nil || exportStatusOutput.ExportDescription == nil {
+			return "", errors.New("dynamo DescribeExport returned unexpected nil on exportStatusOutput")
 		}
 
-		select {
-		case <-ctx.Done():
-			return "", trace.Wrap(ctx.Err())
-		case <-time.After(10 * time.Second):
-			t.Logger.Debug("Export job still in progress...")
+		exportStatus := exportStatusOutput.ExportDescription.ExportStatus
+		switch exportStatus {
+		case dynamoTypes.ExportStatusCompleted:
+			return aws.ToString(exportStatusOutput.ExportDescription.ExportManifest), nil
+		case dynamoTypes.ExportStatusFailed:
+			return "", trace.Errorf("export %s returned failed status", exportARN)
+		case dynamoTypes.ExportStatusInProgress:
+			select {
+			case <-ctx.Done():
+				return "", trace.Wrap(ctx.Err())
+			case <-time.After(10 * time.Second):
+				t.Logger.Debug("Export job still in progress...")
+			}
 		}
+
 	}
 }
 
