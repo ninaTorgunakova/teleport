@@ -252,7 +252,7 @@ func (t *task) waitForCompletedExport(ctx context.Context, exportARN string) (ex
 		}
 
 		if exportStatusOutput == nil || exportStatusOutput.ExportDescription == nil {
-			return "", errors.New("dynamo DescribeExport returned unexpected nil on exportStatusOutput")
+			return "", errors.New("dynamo DescribeExport returned unexpected nil on response")
 		}
 
 		exportStatus := exportStatusOutput.ExportDescription.ExportStatus
@@ -284,8 +284,13 @@ func (t *task) startExportJob(ctx context.Context) (arn string, err error) {
 	if err != nil {
 		return "", trace.Wrap(err)
 	}
-	t.Logger.Info("Started new export")
-	return aws.ToString(exportOutput.ExportDescription.ExportArn), nil
+	if exportOutput == nil || exportOutput.ExportDescription == nil {
+		return "", errors.New("dynamo ExportTableToPointInTime returned unexpected nil on response")
+	}
+
+	exportArn := aws.ToString(exportOutput.ExportDescription.ExportArn)
+	t.Logger.Infof("Started export %s", exportArn)
+	return exportArn, nil
 }
 
 type exportInfo struct {
@@ -514,7 +519,7 @@ func (t *task) loadEmitterCheckpoint(ctx context.Context, exportARN string) (*ch
 
 func (t *task) emitEvents(ctx context.Context, eventsC <-chan apievents.AuditEvent, exportARN string) error {
 	if t.DryRun {
-		// in dryRun we just want to count events, validation is done on ready from file.
+		// in dryRun we just want to count events, validation is done when reading from file.
 		var count int
 		var oldest, newest apievents.AuditEvent
 		for event := range eventsC {

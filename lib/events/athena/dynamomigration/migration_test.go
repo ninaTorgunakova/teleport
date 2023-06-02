@@ -173,7 +173,7 @@ func TestMigrationCheckpoint(t *testing.T) {
 	defer cancel()
 
 	// There is confirmation prompt in migration when reusing checkpoint, that's why
-	// Stdin is overwriten in tests.
+	// Stdin is overwritten in tests.
 	oldStdin := prompt.Stdin()
 	t.Cleanup(func() { prompt.SetStdin(oldStdin) })
 
