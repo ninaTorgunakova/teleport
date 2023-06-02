@@ -490,10 +490,7 @@ func (t *task) storeEmitterCheckpoint(in checkpointData) error {
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	if err := os.WriteFile(t.CheckpointPath, bb, 0o755); err != nil {
-		return trace.Wrap(err)
-	}
-	return nil
+	return trace.Wrap(os.WriteFile(t.CheckpointPath, bb, 0o755))
 }
 
 func (t *task) loadEmitterCheckpoint(ctx context.Context, exportARN string) (*checkpointData, error) {
@@ -543,32 +540,21 @@ func (t *task) emitEvents(ctx context.Context, eventsC <-chan apievents.AuditEve
 	var mu sync.Mutex
 	checkpointsPerWorker := map[int]string{}
 
-	// write information about last checkpoint which can be used to continue.
-	workerCtx, workerCancel := context.WithCancel(ctx)
-	defer workerCancel()
+	errG, workerCtx := errgroup.WithContext(ctx)
 
-	errorC := make(chan error, t.NoOfEmitWorkers)
-
-	var wg sync.WaitGroup
-	wg.Add(t.NoOfEmitWorkers)
 	for i := 0; i < t.NoOfEmitWorkers; i++ {
-		go func(i int) {
-			defer wg.Done()
-
+		i := i
+		errG.Go(func() error {
 			for {
 				select {
 				case <-workerCtx.Done():
-					return
+					return trace.Wrap(ctx.Err())
 				case e, ok := <-eventsC:
 					if !ok {
-						return
+						return nil
 					}
 					if err := t.eventsEmitter.EmitAuditEvent(workerCtx, e); err != nil {
-						// Cancel other workers
-						workerCancel()
-						errorC <- err
-						return
-
+						return trace.Wrap(err)
 					} else {
 						mu.Lock()
 						checkpointsPerWorker[i] = e.GetID()
@@ -576,12 +562,11 @@ func (t *task) emitEvents(ctx context.Context, eventsC <-chan apievents.AuditEve
 					}
 				}
 			}
-		}(i)
+		})
 	}
-	wg.Wait()
 
-	close(errorC)
-	workersErr := trace.NewAggregateFromChannel(errorC, ctx)
+	workersErr := errG.Wait()
+	// workersErr is handled below because we want to store checkpoint on error.
 
 	// If there is missing data from at least one worker, it means that worker
 	// does not have any valid checkpoint to store. Without any valid checkpoint
