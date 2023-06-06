@@ -128,6 +128,7 @@ func TestIntegrations(t *testing.T) {
 	t.Run("BPFExec", suite.bind(testBPFExec))
 	t.Run("BPFInteractive", suite.bind(testBPFInteractive))
 	t.Run("BPFSessionDifferentiation", suite.bind(testBPFSessionDifferentiation))
+	t.Run("ClientIdleConnection", suite.bind(testClientIdleConnection))
 	t.Run("CmdLabels", suite.bind(testCmdLabels))
 	t.Run("ControlMaster", suite.bind(testControlMaster))
 	t.Run("CustomReverseTunnel", suite.bind(testCustomReverseTunnel))
@@ -1807,6 +1808,88 @@ type disconnectTestCase struct {
 	// itself, as those assertions must run in the main test goroutine, but
 	// verifyError runs in a different goroutine.
 	verifyError errorVerifier
+}
+
+type repeatingReader struct {
+	s        string
+	interval time.Duration
+}
+
+func (r repeatingReader) Read(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+
+	<-time.After(r.interval)
+
+	end := len(r.s)
+	if end > len(p) {
+		end = len(p)
+	}
+
+	n := copy(p, r.s[:end])
+	return n, nil
+}
+
+// testClientIdleConnection validates that if a user is active beyond
+// the client idle timeout that the session is not terminated.
+func testClientIdleConnection(t *testing.T, suite *integrationTestSuite) {
+	netConfig := types.DefaultClusterNetworkingConfig()
+	netConfig.SetClientIdleTimeout(time.Second)
+
+	tconf := servicecfg.MakeDefaultConfig()
+	tconf.SSH.Enabled = true
+	tconf.Log = utils.NewLoggerForTests()
+	tconf.Proxy.DisableWebService = true
+	tconf.Proxy.DisableWebInterface = true
+	tconf.Auth.NetworkingConfig = netConfig
+	tconf.CircuitBreakerConfig = breaker.NoopBreakerConfig()
+	tconf.InstanceMetadataClient = cloud.NewDisabledIMDSClient()
+
+	instance := suite.NewTeleportWithConfig(t, nil, nil, tconf)
+	defer instance.StopAll()
+
+	var output bytes.Buffer
+
+	// SSH into the server, and stay active for longer than
+	// the client idle timeout.
+	sessionErr := make(chan error)
+	openSession := func() {
+		cl, err := instance.NewClient(helpers.ClientConfig{
+			Login:   suite.Me.Username,
+			Cluster: helpers.Site,
+			Host:    Host,
+		})
+		if err != nil {
+			sessionErr <- trace.Wrap(err)
+			return
+		}
+		cl.Stdout = &output
+		// Execute a command once every 100ms to stay active.
+		cl.Stdin = repeatingReader{interval: netConfig.GetClientIdleTimeout() / 10, s: "echo txlxport | sed 's/x/e/g'\n"}
+
+		// Terminate the session after 3x the idle timeout
+		ctx, cancel := context.WithTimeout(context.Background(), netConfig.GetClientIdleTimeout()*3)
+		defer cancel()
+		sessionErr <- cl.SSH(ctx, nil, false)
+	}
+
+	go openSession()
+
+	// Wait for the sessions to end - we expect an error
+	// since we are canceling the context.
+	err := waitForError(sessionErr, time.Second*10)
+	require.Error(t, err)
+
+	// Ensure that the session was alive beyond the idle timeout by
+	// counting the number of times "teleport" was output. If the session
+	// was alive past the idle timeout then there should be at least 10 occurrences
+	// since the command is run at 1/10 the idle timeout. We expect there to be
+	// between 11-30 occurrences since the session is terminated at ~3x the idle timeout.
+	require.NotEmpty(t, output)
+	count := strings.Count(output.String(), "teleport")
+	require.Greater(t, count, 10)
+	require.LessOrEqual(t, count, 30)
 }
 
 // TestDisconnectScenarios tests multiple scenarios with client disconnects
