@@ -46,9 +46,10 @@ interface SelectResourceProps<T = ResourceKind> {
   extraResources?: ExtraResources<T>;
 }
 
-export function SelectResource<T = ResourceKind>(
-  props: SelectResourceProps<T>
-) {
+export function SelectResource<T = ResourceKind>({
+  onSelect,
+  extraResources = [],
+}: SelectResourceProps<T>) {
   const ctx = useTeleport();
   const location = useLocation<{ entity: AddButtonResourceKind }>();
   const history = useHistory();
@@ -82,7 +83,7 @@ export function SelectResource<T = ResourceKind>(
     const { acl } = userContext;
     const updatedResources = [
       ...makeResourcesWithHasAccessField(acl),
-      ...[...props.extraResources], // extraResources should already have a populated `hasAccess` field
+      ...[...extraResources], // extraResources should already have a populated `hasAccess` field
     ] as ResourceSpec[];
 
     // Sort resources that user has access to the
@@ -160,7 +161,7 @@ export function SelectResource<T = ResourceKind>(
                 };
               } else {
                 resourceCardProps = {
-                  onClick: () => r.hasAccess && props.onSelect(r),
+                  onClick: () => r.hasAccess && onSelect(r),
                 };
               }
 

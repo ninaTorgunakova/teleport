@@ -97,9 +97,11 @@ export type DiscoverUrlLocationState = {
 
 const discoverContext = React.createContext<DiscoverContextState>(null);
 
-export function DiscoverProvider<T>(
-  props: React.PropsWithChildren<DiscoverProviderProps<T>>
-) {
+export function DiscoverProvider<T>({
+  mockCtx,
+  children,
+  extraViewConfigs = [],
+}: React.PropsWithChildren<DiscoverProviderProps<T>>) {
   const history = useHistory();
   const location = useLocation<DiscoverUrlLocationState>();
 
@@ -261,7 +263,7 @@ export function DiscoverProvider<T>(
     targetViewIndex = 0
   ) {
     // Process each view and assign each with an index number.
-    const currCfg = [...viewConfigs, ...props.extraViewConfigs].find(
+    const currCfg = [...viewConfigs, ...extraViewConfigs].find(
       r => r.kind === resource.kind
     );
     let indexedViews = [];
@@ -401,8 +403,8 @@ export function DiscoverProvider<T>(
   };
 
   return (
-    <discoverContext.Provider value={props.mockCtx || value}>
-      {props.children}
+    <discoverContext.Provider value={mockCtx || value}>
+      {children}
     </discoverContext.Provider>
   );
 }
