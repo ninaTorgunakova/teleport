@@ -18,6 +18,7 @@ package reversetunnel
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/gravitational/trace"
 
@@ -29,11 +30,11 @@ import (
 // discoveryRequest is a request sent from a connected proxy with the missing proxies.
 type discoveryRequest struct {
 	// Proxies is a list of proxies in the cluster sending the discovery request.
-	Proxies []types.Server `json:"proxies"`
+	Proxies []types.Server
 }
 
 // ProxyNames returns the names of all proxies carried in the request
-func (r *discoveryRequest) ProxyNames() []string {
+func (r discoveryRequest) ProxyNames() []string {
 	names := make([]string, 0, len(r.Proxies))
 	for _, p := range r.Proxies {
 		names = append(names, p.GetName())
@@ -42,21 +43,42 @@ func (r *discoveryRequest) ProxyNames() []string {
 	return names
 }
 
+func (r discoveryRequest) String() string {
+	var b strings.Builder
+	b.WriteRune('[')
+	for i, p := range r.Proxies {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(p.GetName())
+		if group, _ := p.GetLabel(types.ProxyGroupLabel); group != "" {
+			b.WriteRune('(')
+			b.WriteString(group)
+			b.WriteRune(')')
+		}
+	}
+	b.WriteRune(']')
+	return b.String()
+}
+
 // MarshalJSON creates a minimal JSON representation of a discoveryRequest
 // by converting the Proxies from types.Server to discoveryProxy.
 // The minification is useful since only the Proxy ID is to be consumed
 // by the agents. This is needed to maintain backward compatibility
 // but should be replaced in the future by a message which
-// only contains the Proxy IDs.
-func (r *discoveryRequest) MarshalJSON() ([]byte, error) {
+// only contains the necessary data.
+func (r discoveryRequest) MarshalJSON() ([]byte, error) {
 	var out struct {
 		Proxies []discoveryProxy `json:"proxies"`
 	}
 
 	out.Proxies = make([]discoveryProxy, 0, len(r.Proxies))
-
 	for _, p := range r.Proxies {
-		out.Proxies = append(out.Proxies, discoveryProxy(p.GetName()))
+		proxyGroup, _ := p.GetLabel(types.ProxyGroupLabel)
+		out.Proxies = append(out.Proxies, discoveryProxy{
+			Name:       p.GetName(),
+			ProxyGroup: proxyGroup,
+		})
 	}
 
 	return json.Marshal(out)
@@ -75,20 +97,17 @@ func (r *discoveryRequest) UnmarshalJSON(data []byte) error {
 		return trace.Wrap(err)
 	}
 
-	d := discoveryRequest{
-		Proxies: make([]types.Server, 0, len(in.Proxies)),
-	}
-
+	proxies := make([]types.Server, 0, len(in.Proxies))
 	for _, bytes := range in.Proxies {
 		proxy, err := services.UnmarshalServer(bytes, types.KindProxy)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 
-		d.Proxies = append(d.Proxies, proxy)
+		proxies = append(proxies, proxy)
 	}
 
-	*r = d
+	r.Proxies = proxies
 	return nil
 }
 
@@ -101,8 +120,11 @@ func (r *discoveryRequest) UnmarshalJSON(data []byte) error {
 //
 // This should eventually be replaced by a newer version of
 // messages used by agents to indicate they can support discovery
-// requests which only contain Proxy IDs.
-type discoveryProxy string
+// requests which only contain the necessary data.
+type discoveryProxy struct {
+	Name       string
+	ProxyGroup string
+}
 
 // MarshalJSON creates a minimum representation of types.Server
 // such that (*discoveryRequest) UnmarshalJSON will successfully
@@ -112,10 +134,16 @@ func (s discoveryProxy) MarshalJSON() ([]byte, error) {
 	var p struct {
 		Version  string `json:"version"`
 		Metadata struct {
-			Name string `json:"name"`
+			Name   string            `json:"name"`
+			Labels map[string]string `json:"labels,omitempty"`
 		} `json:"metadata"`
 	}
 	p.Version = types.V2
-	p.Metadata.Name = string(s)
+	p.Metadata.Name = s.Name
+	if s.ProxyGroup != "" {
+		p.Metadata.Labels = map[string]string{
+			types.ProxyGroupLabel: s.ProxyGroup,
+		}
+	}
 	return json.Marshal(p)
 }

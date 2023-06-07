@@ -2154,6 +2154,11 @@ func Configure(clf *CommandLineFlags, cfg *servicecfg.Config, legacyAppFlags boo
 	// set the default proxy listener addresses for config v1, if not already set
 	applyDefaultProxyListenerAddresses(cfg)
 
+	// not publicly documented or supported for now (thus the "TELEPORT_UNSTABLE_" prefix)
+	if proxyGroup := os.Getenv("TELEPORT_UNSTABLE_PROXY_GROUP"); proxyGroup != "" {
+		cfg.Proxy.ProxyGroup = proxyGroup
+	}
+
 	return nil
 }
 

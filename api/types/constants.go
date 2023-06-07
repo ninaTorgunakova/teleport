@@ -562,6 +562,11 @@ const (
 	// that the discovered resource is owned by. It is used to differentiate resources
 	// that belong to different discovery services that operate on different sets of resources.
 	TeleportInternalDiscoveryGroupName = TeleportInternalLabelPrefix + "discovery-group-name"
+
+	// ProxyGroupLabel is the internal-use label for proxy heartbeats that's
+	// used by reverse tunnel agents to keep track of multiple sets of
+	// connections in proxy peering mode.
+	ProxyGroupLabel = TeleportInternalLabelPrefix + "proxy-group"
 )
 
 // CloudHostnameTag is the name of the tag in a cloud instance used to override a node's hostname.
