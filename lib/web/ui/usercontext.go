@@ -104,8 +104,8 @@ type userACL struct {
 	Locks access `json:"lock"`
 	// Assist defines access to assist feature.
 	Assist access `json:"assist"`
-	// SamlIdpServiceProvider defines access to `saml_idp_service_provider` objects.
-	SamlIdpServiceProvider access `json:"samlIdpServiceProvider"`
+	// SAMLIdpServiceProvider defines access to `saml_idp_service_provider` objects.
+	SAMLIdpServiceProvider access `json:"samlIdpServiceProvider"`
 }
 
 type authType string
@@ -254,7 +254,7 @@ func NewUserContext(user types.User, userRoles services.RoleSet, features proto.
 		DeviceTrust:             deviceTrust,
 		Locks:                   lockAccess,
 		Assist:                  assistAccess,
-		SamlIdpServiceProvider:  samlIdpServiceProviderAccess,
+		SAMLIdpServiceProvider:  samlIdpServiceProviderAccess,
 	}
 
 	// local user

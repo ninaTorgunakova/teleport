@@ -76,6 +76,6 @@ export interface ResourceSpec<T = ResourceKind> {
 /** ExtraResources are extra resources to add to Discover that arent defined in `Discover/SelectResource/resources.tsx`.
  * This is used to pass in enterprise-only resources. */
 export type ExtraResources<T> = ResourceSpec<T>[];
-/** ExtraResources are extra resources to add to Discover that arent defined in `Discover/resourceViewConfigs.ts`.
+/** ExtraViewConfigs are extra view configs to add to Discover that arent defined in `Discover/resourceViewConfigs.ts`.
  * This is used to pass in the view configs for enterprise-only resources. */
 export type ExtraViewConfigs<T> = ResourceViewConfig<any, T>[];
