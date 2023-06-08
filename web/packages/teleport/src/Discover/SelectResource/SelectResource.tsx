@@ -35,21 +35,18 @@ import {
   RESOURCES,
 } from 'teleport/Discover/SelectResource/resources';
 import AddApp from 'teleport/Apps/AddApp';
+import cfg from 'teleport/config';
 
 import { icons } from './icons';
 
-import type { ExtraResources, ResourceSpec } from './types';
+import type { ResourceSpec } from './types';
 import type { AddButtonResourceKind } from 'teleport/components/AgentButtonAdd/AgentButtonAdd';
 
-interface SelectResourceProps<T = ResourceKind> {
+interface SelectResourceProps {
   onSelect: (resource: ResourceSpec) => void;
-  extraResources?: ExtraResources<T>;
 }
 
-export function SelectResource<T = ResourceKind>({
-  onSelect,
-  extraResources = [],
-}: SelectResourceProps<T>) {
+export function SelectResource({ onSelect }: SelectResourceProps) {
   const ctx = useTeleport();
   const location = useLocation<{ entity: AddButtonResourceKind }>();
   const history = useHistory();
@@ -81,10 +78,7 @@ export function SelectResource<T = ResourceKind>({
     // Apply access check to each resource.
     const userContext = ctx.storeUser.state;
     const { acl } = userContext;
-    const updatedResources = [
-      ...makeResourcesWithHasAccessField(acl),
-      ...[...extraResources], // extraResources should already have a populated `hasAccess` field
-    ] as ResourceSpec[];
+    const updatedResources = makeResourcesWithHasAccessField(acl);
 
     // Sort resources that user has access to the
     // the top of the list, so it is more visible to
@@ -279,6 +273,8 @@ function checkHasAccess(acl: Acl, resourceKind: ResourceKind) {
       return acl.kubeServers.read && acl.kubeServers.list;
     case ResourceKind.Server:
       return acl.nodes.list;
+    case ResourceKind.SamlApplication:
+      return acl.samlIdpServiceProvider.create;
     default:
       return false;
   }
@@ -325,7 +321,7 @@ function sortResourcesByKind(
 }
 
 // Sort the resources alphabetically and with the Guided resources listed first.
-function sortResources<T>(resources: ResourceSpec<T>[]) {
+function sortResources(resources: ResourceSpec[]) {
   const sortedResources = [...resources];
   sortedResources.sort((a, b) => {
     if (!a.unguidedLink && a.hasAccess && !b.unguidedLink && b.hasAccess) {
@@ -344,7 +340,16 @@ function sortResources<T>(resources: ResourceSpec<T>[]) {
 }
 
 function makeResourcesWithHasAccessField(acl: Acl): ResourceSpec[] {
-  return RESOURCES.map(r => {
+  // Filter out enterprise-only resources if the user isn't enterprise.
+  const filteredResourcesByLicense = RESOURCES.filter(resource => {
+    if (resource.isEnterprise) {
+      return cfg.isEnterprise;
+    } else {
+      return true;
+    }
+  });
+
+  return filteredResourcesByLicense.map(r => {
     const hasAccess = checkHasAccess(acl, r.kind);
     switch (r.kind) {
       case ResourceKind.Database:

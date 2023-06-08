@@ -33,7 +33,6 @@ import {
   View,
 } from './flow';
 import { viewConfigs } from './resourceViewConfigs';
-import { ResourceKind } from './Shared';
 
 import type { Node } from 'teleport/services/nodes';
 import type { Kube } from 'teleport/services/kube';
@@ -71,11 +70,11 @@ type CustomEventInput = {
   selectedResourcesCount?: number;
 };
 
-type DiscoverProviderProps<T = ResourceKind> = {
+type DiscoverProviderProps = {
   // mockCtx used for testing purposes.
   mockCtx?: DiscoverContextState;
   // Extra view configs that are passed in. This is used to add view configs from Enterprise.
-  extraViewConfigs?: ResourceViewConfig<any, T>[];
+  extraViewConfigs?: ResourceViewConfig[];
 };
 
 // DiscoverUrlLocationState define fields to preserve state between
@@ -97,11 +96,11 @@ export type DiscoverUrlLocationState = {
 
 const discoverContext = React.createContext<DiscoverContextState>(null);
 
-export function DiscoverProvider<T>({
+export function DiscoverProvider({
   mockCtx,
   children,
   extraViewConfigs = [],
-}: React.PropsWithChildren<DiscoverProviderProps<T>>) {
+}: React.PropsWithChildren<DiscoverProviderProps>) {
   const history = useHistory();
   const location = useLocation<DiscoverUrlLocationState>();
 
@@ -285,7 +284,7 @@ export function DiscoverProvider<T>({
       currEventName: eventName,
       manuallyEmitSuccessEvent,
     });
-    setViewConfig(currCfg as ResourceViewConfig<any, ResourceKind>);
+    setViewConfig(currCfg);
     setIndexedViews(indexedViews);
     setResourceSpec(resource);
     setCurrentStep(targetViewIndex);

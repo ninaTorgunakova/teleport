@@ -101,6 +101,25 @@ export const KUBERNETES: ResourceSpec[] = [
   },
 ];
 
+export const SAML_APPLICATIONS: ResourceSpec[] = [
+  {
+    name: 'SAML Application',
+    kind: ResourceKind.SamlApplication,
+    keywords: 'saml sso application idp',
+    icon: 'Application',
+    event: DiscoverEventResource.SamlApplication,
+    isEnterprise: true,
+  },
+  {
+    name: 'SAML Application (Grafana)',
+    kind: ResourceKind.SamlApplication,
+    keywords: 'saml sso application idp grafana',
+    icon: 'Grafana',
+    event: DiscoverEventResource.SamlApplication,
+    isEnterprise: true,
+  },
+];
+
 export const RESOURCES: ResourceSpec[] = [
   ...APPLICATIONS,
   ...KUBERNETES,
@@ -109,6 +128,7 @@ export const RESOURCES: ResourceSpec[] = [
   ...DATABASES,
   ...DATABASES_UNGUIDED,
   ...DATABASES_UNGUIDED_DOC,
+  ...SAML_APPLICATIONS,
 ];
 
 export function getResourcePretitle(r: ResourceSpec) {

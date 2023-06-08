@@ -24,8 +24,8 @@ import { ResourceSpec } from './SelectResource';
 
 type ViewFunction<T> = (t: T) => View[];
 
-export interface ResourceViewConfig<T1 = any, T2 = ResourceKind> {
-  kind: T2;
+export interface ResourceViewConfig<T = any> {
+  kind: ResourceKind;
   // views contain all the possible views for a resource kind.
   // Resources with no sub types will have views defined
   // in a simple View list (eg. kubernetes and servers).
@@ -34,7 +34,7 @@ export interface ResourceViewConfig<T1 = any, T2 = ResourceKind> {
   // example, a database resource can have many sub-types.
   // A aws postgres will contain different views versus a
   // self-hosted postgres.
-  views: View[] | ViewFunction<T1>;
+  views: View[] | ViewFunction<T>;
   wrapper?: (component: React.ReactNode) => React.ReactNode;
   // shouldPrompt is an optional function that determines if the
   // react-router-dom's Prompt should be invocated on exit or

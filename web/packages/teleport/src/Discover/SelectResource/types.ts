@@ -51,11 +51,11 @@ export enum DatabaseEngine {
   Doc,
 }
 
-export interface ResourceSpec<T = ResourceKind> {
+export interface ResourceSpec {
   dbMeta?: { location: DatabaseLocation; engine: DatabaseEngine };
   name: string;
   popular?: boolean;
-  kind: T;
+  kind: ResourceKind;
   icon: ResourceIconName;
   // keywords are filter words that user may use to search for
   // this resource.
@@ -71,11 +71,10 @@ export interface ResourceSpec<T = ResourceKind> {
   // the type of this resource (eg. server v. kubernetes),
   // used for usage reporting.
   event: DiscoverEventResource;
+  /** isEnterprise is whether or not the resource is only available to Enterprise users. */
+  isEnterprise?: boolean;
 }
 
-/** ExtraResources are extra resources to add to Discover that arent defined in `Discover/SelectResource/resources.tsx`.
- * This is used to pass in enterprise-only resources. */
-export type ExtraResources<T> = ResourceSpec<T>[];
 /** ExtraViewConfigs are extra view configs to add to Discover that arent defined in `Discover/resourceViewConfigs.ts`.
  * This is used to pass in the view configs for enterprise-only resources. */
-export type ExtraViewConfigs<T> = ResourceViewConfig<any, T>[];
+export type ExtraViewConfigs = ResourceViewConfig[];
