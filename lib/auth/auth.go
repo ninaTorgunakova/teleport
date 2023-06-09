@@ -1501,7 +1501,7 @@ func (a *Server) GenerateOpenSSHCert(ctx context.Context, req *proto.OpenSSHCert
 	if req.TTL == 0 {
 		cap, err := a.GetAuthPreference(ctx)
 		if err != nil {
-			return nil, trace.Wrap(err)
+			return nil, trace.BadParameter("cert request does not specify a TTL and the cluster_auth_preference is not available: %v", err)
 		}
 		req.TTL = proto.Duration(cap.GetDefaultSessionTTL())
 	}

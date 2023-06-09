@@ -307,16 +307,9 @@ spec:
   # issued to the users on this cluster.
   default_session_ttl: "12h"
 
+  # The type of authentication to use for this cluster.
+  # Possible values: "local", "oidc", "saml" and "github"
   type: local
 
-  # Deprecated by Webauthn: U2F are settings for the u2f device.
-  u2f:
-    # app_id returns the application ID for universal second factor.
-    app_id: "https://example.com"
-    # Deprecated: Kept for backwards compatibility reasons, but Facets have no
-    # effect since Teleport v10, when Webauthn replaced the U2F implementation.
-    facets: ["https://example.com:8000"]
-    # Contains the trusted attestation CAs for U2F devices.
-    device_attestation_cas: ["-----BEGIN CERTIFICATE-----\nfake certificate\n-----END CERTIFICATE-----"]
 version: v2
 ```

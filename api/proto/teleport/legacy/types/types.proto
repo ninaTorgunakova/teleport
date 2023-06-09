@@ -1721,7 +1721,8 @@ message AuthPreferenceSpecV2 {
     (gogoproto.customtype) = "BoolOption"
   ];
 
-  // DefaultSessionTTL defines how long a session can last for.
+  // DefaultSessionTTL is the TTL to use for user certs when
+  // an explicit TTL is not requested.
   int64 DefaultSessionTTL = 16 [
     (gogoproto.jsontag) = "default_session_ttl,omitempty",
     (gogoproto.casttype) = "Duration"

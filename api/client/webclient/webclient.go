@@ -410,7 +410,8 @@ type AuthenticationSettings struct {
 	HasMessageOfTheDay bool `json:"has_motd"`
 	// LoadAllCAs tells tsh to load CAs for all clusters when trying to ssh into a node.
 	LoadAllCAs bool `json:"load_all_cas,omitempty"`
-	// DefaultSessionTTL is the cluster wide max session ttl default
+	// DefaultSessionTTL is the TTL requested for user certs if
+	// a TTL is not otherwise specified.
 	DefaultSessionTTL types.Duration `json:"default_session_ttl"`
 }
 

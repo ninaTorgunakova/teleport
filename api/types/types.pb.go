@@ -4928,7 +4928,8 @@ type AuthPreferenceSpecV2 struct {
 	// Defaults to true if the Webauthn is configured, defaults to false
 	// otherwise.
 	AllowHeadless *BoolOption `protobuf:"bytes,15,opt,name=AllowHeadless,proto3,customtype=BoolOption" json:"allow_headless,omitempty"`
-	// DefaultSessionTTL defines how long a session can last for.
+	// DefaultSessionTTL is the TTL to use for user certs when
+	// an explicit TTL is not requested.
 	DefaultSessionTTL    Duration `protobuf:"varint,16,opt,name=DefaultSessionTTL,proto3,casttype=Duration" json:"default_session_ttl,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
