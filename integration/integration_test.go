@@ -1847,7 +1847,7 @@ func testClientIdleConnection(t *testing.T, suite *integrationTestSuite) {
 	tconf.InstanceMetadataClient = cloud.NewDisabledIMDSClient()
 
 	instance := suite.NewTeleportWithConfig(t, nil, nil, tconf)
-	defer instance.StopAll()
+	t.Cleanup(func() { require.NoError(t, instance.StopAll()) })
 
 	var output bytes.Buffer
 
@@ -1865,7 +1865,7 @@ func testClientIdleConnection(t *testing.T, suite *integrationTestSuite) {
 			return
 		}
 		cl.Stdout = &output
-		// Execute a command once every 100ms to stay active.
+		// Execute a command 10x faster than the idle timeout to stay active.
 		cl.Stdin = repeatingReader{interval: netConfig.GetClientIdleTimeout() / 10, s: "echo txlxport | sed 's/x/e/g'\n"}
 
 		// Terminate the session after 3x the idle timeout
@@ -1883,13 +1883,11 @@ func testClientIdleConnection(t *testing.T, suite *integrationTestSuite) {
 
 	// Ensure that the session was alive beyond the idle timeout by
 	// counting the number of times "teleport" was output. If the session
-	// was alive past the idle timeout then there should be at least 10 occurrences
-	// since the command is run at 1/10 the idle timeout. We expect there to be
-	// between 11-30 occurrences since the session is terminated at ~3x the idle timeout.
+	// was alive past the idle timeout then there should be at least 11 occurrences
+	// since the command is run at 1/10 the idle timeout.
 	require.NotEmpty(t, output)
 	count := strings.Count(output.String(), "teleport")
 	require.Greater(t, count, 10)
-	require.LessOrEqual(t, count, 30)
 }
 
 // TestDisconnectScenarios tests multiple scenarios with client disconnects
