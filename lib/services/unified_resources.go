@@ -449,7 +449,7 @@ func (u *unifiedResourceCollector) getResourcesAndUpdateCurrent(ctx context.Cont
 	nodes := make([]Item, 0)
 	for _, node := range newNodes {
 		nodes = append(nodes, Item{
-			Key:   []byte("unified_resouce"),
+			Key:   []byte(node.GetName() + "/" + node.GetKind()),
 			Value: node.GetName(),
 			ID:    u.current.generateID(),
 		})
@@ -468,8 +468,13 @@ func (u *unifiedResourceCollector) initializationChan() <-chan struct{} {
 }
 
 func (u *unifiedResourceCollector) processEventAndUpdateCurrent(ctx context.Context, event types.Event) {
+	// TESTING VALUE DOESN'T
 	fmt.Println("---------")
-	fmt.Printf("%+v\n", "urc processEvent")
+	item, err := u.current.Get(ctx, []byte("zidane/"+types.KindNode))
+	if err != nil {
+		fmt.Printf("err: %+v\n", err)
+	}
+	fmt.Printf("%+v\n", item)
 	fmt.Println("---------")
 }
 
