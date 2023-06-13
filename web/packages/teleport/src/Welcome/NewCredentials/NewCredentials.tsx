@@ -23,6 +23,8 @@ import { NewFlow, StepComponentProps, StepSlider } from 'design/StepSlider';
 import RecoveryCodes from 'teleport/components/RecoveryCodes';
 import { PrivateKeyLoginDisabledCard } from 'teleport/components/PrivateKeyPolicy';
 
+import { Questionnaire } from 'teleport/Welcome/Questionnaire/Questionnaire';
+
 import useToken, { State } from '../useToken';
 
 import { Expired } from './Expired';
@@ -58,6 +60,13 @@ export function NewCredentials(props: State & Props) {
     finishedRegister,
     privateKeyPolicyEnabled,
   } = props;
+
+  // todo mberg
+  const questionnaire = true;
+
+  if (questionnaire) {
+    return <Questionnaire />;
+  }
 
   if (fetchAttempt.status === 'failed') {
     return <Expired resetMode={resetMode} />;

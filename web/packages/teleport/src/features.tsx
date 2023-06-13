@@ -22,11 +22,11 @@ import {
   ApplicationsIcon,
   AuditLogIcon,
   AuthConnectorsIcon,
-  LockIcon,
   DatabasesIcon,
   DesktopsIcon,
   IntegrationsIcon,
   KubernetesIcon,
+  LockIcon,
   ManageClustersIcon,
   RolesIcon,
   ServersIcon,
@@ -44,7 +44,7 @@ import {
   NavigationCategory,
 } from 'teleport/Navigation/categories';
 
-import type { TeleportFeature, FeatureFlags } from './types';
+import type { FeatureFlags, TeleportFeature } from './types';
 
 const Audit = lazy(() => import('./Audit'));
 const Nodes = lazy(() => import('./Nodes'));
@@ -68,6 +68,9 @@ const Integrations = lazy(() => import('./Integrations'));
 const IntegrationEnroll = lazy(
   () => import('@gravitational/teleport/src/Integrations/Enroll')
 );
+
+// todo mberg delete
+const QuestionnaireTEMP = lazy(() => import('./Welcome/Questionnaire'));
 
 // ****************************
 // Resource Features
@@ -550,12 +553,13 @@ export class FeatureAccount implements TeleportFeature {
   };
 }
 
+// todo mberg fix
 export class FeatureHelpAndSupport implements TeleportFeature {
   route = {
     title: 'Help & Support',
     path: cfg.routes.support,
     exact: true,
-    component: Support,
+    component: QuestionnaireTEMP,
   };
 
   hasAccess() {
