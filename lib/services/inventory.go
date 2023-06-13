@@ -46,4 +46,7 @@ type InventoryInternal interface {
 	// expected value. The first call to this method should use the value returned by GetRawInstance for the
 	// 'expect' parameter. Subsequent calls should use the value returned by this method.
 	CompareAndSwapInstance(ctx context.Context, instance types.Instance, expect []byte) ([]byte, error)
+
+	// UpsertInstance creates or updates an instance resource.
+	UpsertInstance(ctx context.Context, instance types.Instance) error
 }

@@ -146,4 +146,38 @@ func (s *PresenceService) CompareAndSwapInstance(ctx context.Context, instance t
 	return value, nil
 }
 
+// UpsertInstance creates or updates an instance resource.
+func (s *PresenceService) UpsertInstance(ctx context.Context, instance types.Instance) error {
+	if err := instance.CheckAndSetDefaults(); err != nil {
+		return trace.Wrap(err)
+	}
+
+	// instance resource expiry is calculated relative to LastSeen and/or the longest living
+	// control log entry (whichever is further in the future).
+	if instance.GetLastSeen().IsZero() || instance.Expiry().IsZero() {
+		instance.SetLastSeen(s.Clock().Now().UTC())
+		instance.SyncLogAndResourceExpiry(apidefaults.ServerAnnounceTTL)
+	}
+
+	v1, ok := instance.(*types.InstanceV1)
+	if !ok {
+		return trace.BadParameter("unexpected type %T, expected %T", instance, v1)
+	}
+
+	value, err := utils.FastMarshal(v1)
+	if err != nil {
+		return trace.Errorf("failed to marshal Instance: %v", err)
+	}
+
+	item := backend.Item{
+		Key:     backend.Key(instancePrefix, instance.GetName()),
+		Value:   value,
+		Expires: instance.Expiry(),
+	}
+
+	_, err = s.Backend.Put(ctx, item)
+
+	return trace.Wrap(err)
+}
+
 const instancePrefix = "instances"
