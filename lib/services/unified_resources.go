@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -391,10 +392,13 @@ func (c *UnifiedResourceCache) processEvent(event Event) {
 	}
 }
 
+type DatabaseServersGetter interface {
+	GetDatabaseServers(context.Context, string, ...MarshalOption) ([]types.DatabaseServer, error)
+}
 type UnifiedResourceWatcherConfig struct {
 	ResourceWatcherConfig
 	NodesGetter
-	DatabaseGetter
+	DatabaseServersGetter
 }
 
 type UnifiedResourceWatcher struct {
@@ -440,20 +444,49 @@ func NewUnifiedResourceWatcher(ctx context.Context, cfg UnifiedResourceWatcherCo
 }
 
 func (u *unifiedResourceCollector) getResourcesAndUpdateCurrent(ctx context.Context) error {
-	newNodes, err := u.NodesGetter.GetNodes(ctx, apidefaults.Namespace)
+	err := u.getAndUpdateNodes(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
+	err = u.getAndUpdateDatabases(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
+func (u *unifiedResourceCollector) getAndUpdateNodes(ctx context.Context) error {
+	newNodes, err := u.NodesGetter.GetNodes(ctx, apidefaults.Namespace)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 	nodes := make([]Item, 0)
 	for _, node := range newNodes {
 		nodes = append(nodes, Item{
-			Key:   key(node),
+			Key:   backend.Key(prefix, node.GetNamespace(), node.GetName(), types.KindNode),
 			Value: node,
 			ID:    u.current.generateID(),
 		})
 	}
 	return u.current.PutRange(ctx, nodes)
+}
+
+func (u *unifiedResourceCollector) getAndUpdateDatabases(ctx context.Context) error {
+	newDbs, err := u.DatabaseServersGetter.GetDatabaseServers(ctx, apidefaults.Namespace)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	dbs := make([]Item, 0)
+	for _, db := range newDbs {
+		dbs = append(dbs, Item{
+			Key:   backend.Key(prefix, db.GetNamespace(), db.GetName(), types.KindDatabaseServer),
+			Value: db,
+			ID:    u.current.generateID(),
+		})
+	}
+	return u.current.PutRange(ctx, dbs)
 }
 
 func (c *UnifiedResourceCache) generateID() int64 {
@@ -471,14 +504,24 @@ func (u *unifiedResourceCollector) processEventAndUpdateCurrent(ctx context.Cont
 		u.Log.Warnf("Unexpected event: %v.", event)
 		return
 	}
+	// do I get items?
+	items, err := u.current.GetRange(ctx, backend.Key(prefix), backend.RangeEnd(backend.Key(prefix)), backend.NoLimit)
+	if err != nil {
+		u.Log.Errorf("Error getting range: %+v", err)
+	}
+	fmt.Println("-------")
+	fmt.Printf("%+v\n", items)
+	fmt.Println("-------")
+	// I DO!!!
+
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	switch event.Type {
 	case types.OpDelete:
-		u.current.Delete(ctx, key(event.Resource))
+		u.current.Delete(ctx, backend.Key(prefix, event.Resource.GetMetadata().Namespace, event.Resource.GetName(), event.Resource.GetKind()))
 	case types.OpPut:
 		u.current.Put(ctx, Item{
-			Key:   key(event.Resource),
+			Key:   backend.Key(prefix, event.Resource.GetMetadata().Namespace, event.Resource.GetName(), event.Resource.GetKind()),
 			Value: event.Resource.(types.ResourceWithLabels),
 			ID:    u.current.generateID(),
 		})
@@ -492,6 +535,7 @@ func (u *unifiedResourceCollector) resourceKind() string {
 	return types.KindNode
 }
 
-func key(resource types.Resource) []byte {
-	return []byte(resource.GetName() + "/" + resource.GetKind())
-}
+const (
+	separator = "/"
+	prefix    = "unified"
+)

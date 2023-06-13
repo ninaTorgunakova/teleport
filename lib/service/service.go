@@ -1701,8 +1701,8 @@ func (process *TeleportProcess) initAuthService() error {
 			Client:       authServer,
 			MaxStaleness: time.Minute,
 		},
-		NodesGetter:    authServer,
-		DatabaseGetter: authServer,
+		NodesGetter:           authServer,
+		DatabaseServersGetter: authServer,
 	})
 	if err != nil {
 		return trace.Wrap(err)
