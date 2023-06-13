@@ -43,6 +43,7 @@ export const Resources = ({
         bg={theme.colors.spotBackground[0]}
         p="16px 0"
         justifyContent="space-between"
+        onClick={() => updateResources(resource.label)}
       >
         <Flex
           flexDirection="column"
