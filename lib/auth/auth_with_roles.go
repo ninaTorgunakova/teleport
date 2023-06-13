@@ -1596,6 +1596,10 @@ func (a *ServerWithRoles) ListResources(ctx context.Context, req proto.ListResou
 		})
 	}
 
+	fmt.Println("------")
+	fmt.Printf("%+v\n", "here?")
+	fmt.Println("------")
+
 	// ListResources request coming through this auth layer gets request filters
 	// stripped off and saved to be applied later after items go through rbac checks.
 	// The list that gets returned from the backend comes back unfiltered and as
