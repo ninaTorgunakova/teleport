@@ -2677,7 +2677,7 @@ type AppSpecV3 struct {
 	AWS *AppAWS `protobuf:"bytes,6,opt,name=AWS,proto3" json:"aws,omitempty"`
 	// Cloud identifies the cloud instance the app represents.
 	Cloud string `protobuf:"bytes,7,opt,name=Cloud,proto3" json:"cloud,omitempty"`
-	// UserGroups are a list of any user groups that this app is associated with.
+	// UserGroups are a list of user group IDs that this app is associated with.
 	UserGroups           []string `protobuf:"bytes,8,rep,name=UserGroups,proto3" json:"UserGroups,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -14680,8 +14680,7 @@ var xxx_messageInfo_UserGroupV1 proto.InternalMessageInfo
 
 // UserGroupSpecV1 is the specification of a user group.
 type UserGroupSpecV1 struct {
-	// Applications are a list of any applications belonging to a
-	// user group.
+	// Applications are a list of application IDs belonging to this user group.
 	Applications         []string `protobuf:"bytes,1,rep,name=Applications,proto3" json:"Applications,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
