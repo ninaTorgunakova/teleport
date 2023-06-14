@@ -1596,10 +1596,6 @@ func (a *ServerWithRoles) ListResources(ctx context.Context, req proto.ListResou
 		})
 	}
 
-	fmt.Println("------")
-	fmt.Printf("%+v\n", "here?")
-	fmt.Println("------")
-
 	// ListResources request coming through this auth layer gets request filters
 	// stripped off and saved to be applied later after items go through rbac checks.
 	// The list that gets returned from the backend comes back unfiltered and as
@@ -1763,8 +1759,17 @@ func (a *ServerWithRoles) listResourcesWithSort(ctx context.Context, req proto.L
 		return nil, trace.Wrap(err)
 	}
 
+	req.ResourceType = types.KindUnifiedResouce
+
 	var resources []types.ResourceWithLabels
 	switch req.ResourceType {
+	case types.KindUnifiedResouce:
+		unifiedResources, err := a.authServer.unifiedResourceWatcher.GetUnifiedResources(ctx, req.Namespace)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		resources = unifiedResources
 	case types.KindNode:
 		nodes, err := a.GetNodes(ctx, req.Namespace)
 		if err != nil {

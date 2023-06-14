@@ -3,7 +3,6 @@ package services
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -406,6 +405,21 @@ type UnifiedResourceWatcher struct {
 	*unifiedResourceCollector
 }
 
+func (u *UnifiedResourceWatcher) GetUnifiedResources(ctx context.Context, namespace string) ([]types.ResourceWithLabels, error) {
+	result, err := u.current.GetRange(ctx, backend.Key(prefix), backend.RangeEnd(backend.Key(prefix)), backend.NoLimit)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	var resources []types.ResourceWithLabels
+
+	for _, item := range result.Items {
+		resources = append(resources, item.Value)
+	}
+
+	return resources, nil
+}
+
 type unifiedResourceCollector struct {
 	UnifiedResourceWatcherConfig
 	current         *UnifiedResourceCache
@@ -504,15 +518,6 @@ func (u *unifiedResourceCollector) processEventAndUpdateCurrent(ctx context.Cont
 		u.Log.Warnf("Unexpected event: %v.", event)
 		return
 	}
-	// do I get items?
-	items, err := u.current.GetRange(ctx, backend.Key(prefix), backend.RangeEnd(backend.Key(prefix)), backend.NoLimit)
-	if err != nil {
-		u.Log.Errorf("Error getting range: %+v", err)
-	}
-	fmt.Println("-------")
-	fmt.Printf("%+v\n", items)
-	fmt.Println("-------")
-	// I DO!!!
 
 	u.lock.Lock()
 	defer u.lock.Unlock()
