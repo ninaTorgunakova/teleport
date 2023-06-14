@@ -1694,10 +1694,10 @@ func (process *TeleportProcess) initAuthService() error {
 	}
 	authServer.SetLockWatcher(lockWatcher)
 
-	unifiedResourceWatcher, err := services.NewUnifiedResourceWatcher(process.ExitContext(), services.UnifiedResourceWatcherConfig{
+	uiResourceWatcher, err := services.NewUIResourceWatcher(process.ExitContext(), services.UIResourceWatcherConfig{
 		ResourceWatcherConfig: services.ResourceWatcherConfig{
-			Component:    teleport.ComponentUnifiedResource,
-			Log:          process.log.WithField(trace.Component, teleport.ComponentUnifiedResource),
+			Component:    teleport.ComponentUIResource,
+			Log:          process.log.WithField(trace.Component, teleport.ComponentUIResource),
 			Client:       authServer,
 			MaxStaleness: time.Minute,
 		},
@@ -1708,7 +1708,7 @@ func (process *TeleportProcess) initAuthService() error {
 		return trace.Wrap(err)
 	}
 
-	authServer.SetUnifiedResourceWatcher(unifiedResourceWatcher)
+	authServer.SetUIResourceWatcher(uiResourceWatcher)
 
 	headlessAuthenticationWatcher, err := local.NewHeadlessAuthenticationWatcher(process.ExitContext(), local.HeadlessAuthenticationWatcherConfig{
 		Backend: b,
