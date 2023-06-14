@@ -895,11 +895,11 @@ func (s *session) emitSessionStartEvent(ctx *ServerContext) {
 		sessionStartEvent.ConnectionMetadata.LocalAddr = ctx.ServerConn.LocalAddr().String()
 	}
 
-	if err := s.emitAuditEvent(ctx.srv.Context(), sessionStartEvent); err != nil {
-		s.log.WithError(err).Warn("Failed to emit session start event.")
-	}
 	if err := s.recordEvent(ctx.srv.Context(), sessionStartEvent); err != nil {
 		s.log.WithError(err).Warn("Failed to record session start event.")
+	}
+	if err := s.emitAuditEvent(ctx.srv.Context(), sessionStartEvent); err != nil {
+		s.log.WithError(err).Warn("Failed to emit session start event.")
 	}
 }
 
@@ -1034,11 +1034,11 @@ func (s *session) emitSessionEndEvent() {
 		sessionEndEvent.Participants = []string{s.scx.Identity.TeleportUser}
 	}
 
-	if err := s.emitAuditEvent(ctx.srv.Context(), sessionEndEvent); err != nil {
-		s.log.WithError(err).Warn("Failed to emit session end event.")
-	}
 	if err := s.recordEvent(ctx.srv.Context(), sessionEndEvent); err != nil {
 		s.log.WithError(err).Warn("Failed to record session end event.")
+	}
+	if err := s.emitAuditEvent(ctx.srv.Context(), sessionEndEvent); err != nil {
+		s.log.WithError(err).Warn("Failed to emit session end event.")
 	}
 }
 
