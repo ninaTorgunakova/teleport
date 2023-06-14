@@ -1804,7 +1804,7 @@ func (a *ServerWithRoles) GetUIResources(ctx context.Context, namespace string) 
 		"elapsed_fetch":  elapsedFetch,
 		"elapsed_filter": elapsedFilter,
 	}).Debugf(
-		"GetUIResources",
+		"GetUIResources(%v->%v) in %v.",
 		len(uiResources), len(filteredNodes), elapsedFetch+elapsedFilter)
 
 	return filteredNodes, nil
