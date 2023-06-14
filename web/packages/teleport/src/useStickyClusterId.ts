@@ -20,6 +20,8 @@ import { useRef } from 'react';
 import { StickyCluster } from 'teleport/types';
 import cfg from 'teleport/config';
 
+// This is used when :clusterId is expected to exist in the URL. This is in order to handle
+// being in a leaf cluster.
 export default function useStickyClusterId(): StickyCluster {
   // assign initial values where the default cluster is a proxy
   const stickyCluster = useRef({

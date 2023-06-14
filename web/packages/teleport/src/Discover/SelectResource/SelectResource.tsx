@@ -35,7 +35,6 @@ import {
   RESOURCES,
 } from 'teleport/Discover/SelectResource/resources';
 import AddApp from 'teleport/Apps/AddApp';
-import cfg from 'teleport/config';
 
 import { icons } from './icons';
 
@@ -143,6 +142,7 @@ export function SelectResource({ onSelect }: SelectResourceProps) {
                   onClick: () => {
                     if (r.hasAccess) {
                       setShowApp(true);
+                      onSelect(r);
                     }
                   },
                 };
@@ -321,7 +321,7 @@ function sortResourcesByKind(
 }
 
 // Sort the resources alphabetically and with the Guided resources listed first.
-function sortResources(resources: ResourceSpec[]) {
+export function sortResources(resources: ResourceSpec[]) {
   const sortedResources = [...resources];
   sortedResources.sort((a, b) => {
     if (!a.unguidedLink && a.hasAccess && !b.unguidedLink && b.hasAccess) {
@@ -340,16 +340,7 @@ function sortResources(resources: ResourceSpec[]) {
 }
 
 function makeResourcesWithHasAccessField(acl: Acl): ResourceSpec[] {
-  // Filter out enterprise-only resources if the user isn't enterprise.
-  const filteredResourcesByLicense = RESOURCES.filter(resource => {
-    if (resource.isEnterprise) {
-      return cfg.isEnterprise;
-    } else {
-      return true;
-    }
-  });
-
-  return filteredResourcesByLicense.map(r => {
+  return RESOURCES.map(r => {
     const hasAccess = checkHasAccess(acl, r.kind);
     switch (r.kind) {
       case ResourceKind.Database:
