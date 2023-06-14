@@ -3144,7 +3144,6 @@ func GetResourcePage[T types.ResourceWithLabels](ctx context.Context, clt GetRes
 			return out, trail.FromGRPC(err)
 		}
 
-		req.ResourceType = types.KindUIResource
 		for _, respResource := range resp.Resources {
 			var resource types.ResourceWithLabels
 			switch req.ResourceType {

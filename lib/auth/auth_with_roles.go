@@ -1817,8 +1817,6 @@ func (a *ServerWithRoles) listResourcesWithSort(ctx context.Context, req proto.L
 		return nil, trace.Wrap(err)
 	}
 
-	req.ResourceType = types.KindUIResource
-
 	var resources []types.ResourceWithLabels
 	switch req.ResourceType {
 	case types.KindUIResource:
