@@ -64,9 +64,10 @@ export const Resources = ({
           </Text>
         </Flex>
         <CheckboxInput
+          role="checkbox"
           type="checkbox"
-          name={resource.image}
-          id={resource.image}
+          name={resource.label}
+          id={resource.label}
           onChange={() => {
             updateResources(resource.label);
           }}
@@ -77,7 +78,7 @@ export const Resources = ({
   };
 
   return (
-    <>
+    <div role="group" aria-label="resources">
       <InputLabel
         label="Which infrastructure resources do you need to access frequently? Select all that apply."
         aria="resources"
@@ -86,6 +87,6 @@ export const Resources = ({
       <Flex gap={2} alignItems="flex-start" height="170px">
         {resources.map((r: ResourceType, i: number) => renderCheck(r, i))}
       </Flex>
-    </>
+    </div>
   );
 };
