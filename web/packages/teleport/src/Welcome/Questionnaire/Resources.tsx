@@ -34,6 +34,7 @@ export const Resources = ({
   };
 
   const renderCheck = (resource: ResourceType, index: number) => {
+    const isSelected = checked.includes(resource.label);
     return (
       <Flex
         key={`${index}-${resource.label}`}
@@ -44,6 +45,12 @@ export const Resources = ({
         p="16px 0"
         justifyContent="space-between"
         onClick={() => updateResources(resource.label)}
+        borderRadius="4px"
+        style={
+          isSelected ? {
+              border: `1px solid ${theme.colors.brand}`,
+          } : {}
+        }
       >
         <Flex
           flexDirection="column"
@@ -72,7 +79,7 @@ export const Resources = ({
   return (
     <>
       <InputLabel
-        label="Which infrastructure resources do you need to access frequently?"
+        label="Which infrastructure resources do you need to access frequently? Select all that apply."
         aria="resources"
         required
       />
