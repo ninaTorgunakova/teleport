@@ -83,6 +83,12 @@ type ResourceWithOrigin interface {
 	SetOrigin(string)
 }
 
+type ResourceRevision interface {
+	// GetRevision returns the revision of the resource.
+	GetRevision() string
+	SetRevision(rev string)
+}
+
 // ResourceWithLabels is a common interface for resources that have labels.
 type ResourceWithLabels interface {
 	// ResourceWithOrigin is the base resource interface.
@@ -408,6 +414,14 @@ func (m *Metadata) SetOrigin(origin string) {
 		m.Labels = map[string]string{}
 	}
 	m.Labels[OriginLabel] = origin
+}
+
+func (m *Metadata) GetRevision() string {
+	return m.Revision
+}
+
+func (m *Metadata) SetRevision(s string) {
+	m.Revision = s
 }
 
 // CheckAndSetDefaults checks validity of all parameters and sets defaults

@@ -27,6 +27,7 @@ import (
 	"errors"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -191,6 +192,7 @@ func GetName() string {
 
 // keep this here to test interface conformance
 var _ backend.Backend = (*EtcdBackend)(nil)
+var _ backend.ConditionalBackend = (*EtcdBackend)(nil)
 
 // Option is an etcd backend functional option (used in tests).
 type Option func(*options)
@@ -614,9 +616,10 @@ func (b *EtcdBackend) Create(ctx context.Context, item backend.Item) (*backend.L
 		}
 	}
 	start := b.clock.Now()
+	key := b.prependPrefix(item.Key)
 	re, err := b.client.Txn(ctx).
-		If(clientv3.Compare(clientv3.CreateRevision(b.prependPrefix(item.Key)), "=", 0)).
-		Then(clientv3.OpPut(b.prependPrefix(item.Key), base64.StdEncoding.EncodeToString(item.Value), opts...)).
+		If(clientv3.Compare(clientv3.CreateRevision(key), "=", 0)).
+		Then(clientv3.OpPut(key, base64.StdEncoding.EncodeToString(item.Value), opts...)).
 		Commit()
 	txLatencies.Observe(time.Since(start).Seconds())
 	txRequests.Inc()
@@ -639,9 +642,55 @@ func (b *EtcdBackend) Update(ctx context.Context, item backend.Item) (*backend.L
 		}
 	}
 	start := b.clock.Now()
+	key := b.prependPrefix(item.Key)
 	re, err := b.client.Txn(ctx).
-		If(clientv3.Compare(clientv3.CreateRevision(b.prependPrefix(item.Key)), "!=", 0)).
-		Then(clientv3.OpPut(b.prependPrefix(item.Key), base64.StdEncoding.EncodeToString(item.Value), opts...)).
+		If(clientv3.Compare(clientv3.CreateRevision(key), "!=", 0)).
+		Then(clientv3.OpPut(key, base64.StdEncoding.EncodeToString(item.Value), opts...)).
+		Commit()
+	txLatencies.Observe(time.Since(start).Seconds())
+	txRequests.Inc()
+	if err != nil {
+		return nil, trace.Wrap(convertErr(err))
+	}
+	if !re.Succeeded {
+		return nil, trace.NotFound("%q is not found", string(item.Key))
+	}
+	return &lease, nil
+}
+
+func revision(r string) (int64, error) {
+	n, err := strconv.ParseInt(r, 10, 64)
+	if err != nil {
+		return 0, trace.BadParameter("invalid revision: %s", err)
+	}
+
+	return n, err
+}
+
+// ConditionalUpdate updates value in the backend if it hasn't been modified.
+func (b *EtcdBackend) ConditionalUpdate(ctx context.Context, item backend.Item) (*backend.Lease, error) {
+	var opts []clientv3.OpOption
+	var lease backend.Lease
+	if !item.Expires.IsZero() {
+		if err := b.setupLease(ctx, item, &lease, &opts); err != nil {
+			return nil, trace.Wrap(err)
+		}
+	}
+	start := b.clock.Now()
+	key := b.prependPrefix(item.Key)
+	rev, err := revision(item.Revision)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	re, err := b.client.Txn(ctx).
+		If(
+			clientv3.Compare(clientv3.CreateRevision(key), "!=", 0),
+			clientv3.Compare(clientv3.ModRevision(key), "=", rev),
+		).
+		Then(
+			clientv3.OpPut(key, base64.StdEncoding.EncodeToString(item.Value), opts...),
+		).
 		Commit()
 	txLatencies.Observe(time.Since(start).Seconds())
 	txRequests.Inc()
@@ -720,6 +769,57 @@ func (b *EtcdBackend) Put(ctx context.Context, item backend.Item) (*backend.Leas
 	return &lease, nil
 }
 
+// ConditionalPut puts value into backend (creates if it does not exists, updates it otherwise)
+func (b *EtcdBackend) ConditionalPut(ctx context.Context, item backend.Item) (*backend.Lease, error) {
+	var opts []clientv3.OpOption
+	var lease backend.Lease
+	if !item.Expires.IsZero() {
+		if err := b.setupLease(ctx, item, &lease, &opts); err != nil {
+			return nil, trace.Wrap(err)
+		}
+	}
+	start := b.clock.Now()
+
+	key := b.prependPrefix(item.Key)
+	if item.Revision == "" {
+		re, err := b.client.Put(
+			ctx,
+			key,
+			base64.StdEncoding.EncodeToString(item.Value),
+			opts...)
+		writeLatencies.Observe(time.Since(start).Seconds())
+		writeRequests.Inc()
+		if err != nil {
+			return nil, trace.Wrap(convertErr(err))
+		}
+		item.Revision = strconv.FormatInt(re.Header.GetRevision(), 10)
+		return &lease, nil
+	}
+
+	rev, err := revision(item.Revision)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	re, err := b.client.Txn(ctx).
+		If(
+			clientv3.Compare(clientv3.CreateRevision(key), "!=", 0),
+			clientv3.Compare(clientv3.ModRevision(key), "=", rev),
+		).
+		Then(
+			clientv3.OpPut(key, base64.StdEncoding.EncodeToString(item.Value), opts...),
+		).
+		Commit()
+	txLatencies.Observe(time.Since(start).Seconds())
+	txRequests.Inc()
+	if err != nil {
+		return nil, trace.Wrap(convertErr(err))
+	}
+	if !re.Succeeded {
+		return nil, trace.CompareFailed("failed to conditionally update %q", string(item.Key))
+	}
+	return &lease, nil
+}
+
 // KeepAlive updates TTL on the lease ID
 func (b *EtcdBackend) KeepAlive(ctx context.Context, lease backend.Lease, expires time.Time) error {
 	if lease.ID == 0 {
@@ -758,7 +858,7 @@ func (b *EtcdBackend) Get(ctx context.Context, key []byte) (*backend.Item, error
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return &backend.Item{Key: key, Value: bytes, ID: kv.ModRevision, LeaseID: kv.Lease}, nil
+	return &backend.Item{Key: key, Value: bytes, ID: kv.ModRevision, LeaseID: kv.Lease, Revision: strconv.FormatInt(kv.ModRevision, 10)}, nil
 }
 
 // Delete deletes item by key
@@ -772,6 +872,32 @@ func (b *EtcdBackend) Delete(ctx context.Context, key []byte) error {
 	}
 	if re.Deleted == 0 {
 		return trace.NotFound("%q is not found", key)
+	}
+
+	return nil
+}
+
+// ConditionalDelete deletes the item if it hasn't been modified.
+func (b *EtcdBackend) ConditionalDelete(ctx context.Context, prefix []byte, rev string) error {
+	start := b.clock.Now()
+	key := b.prependPrefix(prefix)
+	r, err := revision(rev)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	re, err := b.client.KV.Txn(ctx).If(
+		clientv3.Compare(clientv3.ModRevision(key), "=", r),
+	).Then(
+		clientv3.OpDelete(key),
+	).Commit()
+	writeLatencies.Observe(time.Since(start).Seconds())
+	writeRequests.Inc()
+	if err != nil {
+		return trace.Wrap(convertErr(err))
+	}
+	if !re.Succeeded {
+		return trace.CompareFailed("modification prevented conditional delete of %q", key)
 	}
 
 	return nil
@@ -848,8 +974,9 @@ func (b *EtcdBackend) fromEvent(ctx context.Context, e clientv3.Event) (*backend
 	event := &backend.Event{
 		Type: fromType(e.Type),
 		Item: backend.Item{
-			Key: b.trimPrefix(e.Kv.Key),
-			ID:  e.Kv.ModRevision,
+			Key:      b.trimPrefix(e.Kv.Key),
+			ID:       e.Kv.ModRevision,
+			Revision: strconv.FormatInt(e.Kv.ModRevision, 10),
 		},
 	}
 	if event.Type == types.OpDelete {

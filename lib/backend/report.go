@@ -178,6 +178,93 @@ func (s *Reporter) Put(ctx context.Context, i Item) (*Lease, error) {
 	return lease, err
 }
 
+// ConditionalPut puts value into backend (creates if it does not
+// exists, updates it otherwise)
+func (s *Reporter) ConditionalPut(ctx context.Context, i Item) (*Lease, error) {
+	cb, ok := s.Backend.(ConditionalBackend)
+	if !ok {
+		return s.Put(ctx, i)
+	}
+
+	ctx, span := s.Tracer.Start(
+		ctx,
+		"backend/Put",
+		oteltrace.WithAttributes(
+			attribute.String("key", string(i.Key)),
+			attribute.String("revision", i.Revision),
+		),
+	)
+	defer span.End()
+
+	start := s.Clock().Now()
+	lease, err := cb.ConditionalPut(ctx, i)
+	writeLatencies.WithLabelValues(s.Component).Observe(time.Since(start).Seconds())
+	writeRequests.WithLabelValues(s.Component).Inc()
+	if err != nil {
+		writeRequestsFailed.WithLabelValues(s.Component).Inc()
+	}
+	s.trackRequest(types.OpPut, i.Key, nil)
+	return lease, err
+}
+
+// ConditionalUpdate puts value into backend (creates if it does not
+// exists, updates it otherwise)
+func (s *Reporter) ConditionalUpdate(ctx context.Context, i Item) (*Lease, error) {
+	cb, ok := s.Backend.(ConditionalBackend)
+	if !ok {
+		return s.Update(ctx, i)
+	}
+
+	ctx, span := s.Tracer.Start(
+		ctx,
+		"backend/ConditionalUpdate",
+		oteltrace.WithAttributes(
+			attribute.String("key", string(i.Key)),
+			attribute.String("revision", i.Revision),
+		),
+	)
+	defer span.End()
+
+	start := s.Clock().Now()
+	lease, err := cb.ConditionalUpdate(ctx, i)
+	writeLatencies.WithLabelValues(s.Component).Observe(time.Since(start).Seconds())
+	writeRequests.WithLabelValues(s.Component).Inc()
+	if err != nil {
+		writeRequestsFailed.WithLabelValues(s.Component).Inc()
+	}
+	s.trackRequest(types.OpPut, i.Key, nil)
+	return lease, err
+}
+
+// ConditionalDelete puts value into backend (creates if it does not
+// exists, updates it otherwise)
+func (s *Reporter) ConditionalDelete(ctx context.Context, key []byte, revision string) error {
+	cb, ok := s.Backend.(ConditionalBackend)
+	if !ok {
+		return s.Delete(ctx, key)
+	}
+
+	ctx, span := s.Tracer.Start(
+		ctx,
+		"backend/ConditionalDelete",
+		oteltrace.WithAttributes(
+			attribute.String("key", string(key)),
+			attribute.String("revision", revision),
+		),
+	)
+	defer span.End()
+
+	start := s.Clock().Now()
+	err := cb.ConditionalDelete(ctx, key, revision)
+	writeLatencies.WithLabelValues(s.Component).Observe(time.Since(start).Seconds())
+	writeRequests.WithLabelValues(s.Component).Inc()
+	if err != nil {
+		writeRequestsFailed.WithLabelValues(s.Component).Inc()
+	}
+	s.trackRequest(types.OpPut, key, nil)
+	return err
+}
+
 // Update updates value in the backend
 func (s *Reporter) Update(ctx context.Context, i Item) (*Lease, error) {
 	ctx, span := s.Tracer.Start(

@@ -87,6 +87,8 @@ message Metadata {
   ];
   // ID is a record ID
   int64 ID = 7 [(gogoproto.jsontag) = "id,omitempty"];
+
+  string Revision = 8 [(gogoproto.jsontag) = "revision,omitempty"];
 }
 
 // Rotation is a status of the rotation of the certificate authority

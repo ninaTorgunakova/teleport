@@ -177,8 +177,12 @@ func (s *ClusterConfigurationService) GetAuthPreference(ctx context.Context) (ty
 		}
 		return nil, trace.Wrap(err)
 	}
-	return services.UnmarshalAuthPreference(item.Value,
-		services.WithResourceID(item.ID), services.WithExpires(item.Expires))
+	return services.UnmarshalAuthPreference(
+		item.Value,
+		services.WithResourceID(item.ID),
+		services.WithExpires(item.Expires),
+		services.WithRevision(item.Revision),
+	)
 }
 
 // SetAuthPreference sets the cluster authentication preferences
@@ -195,17 +199,22 @@ func (s *ClusterConfigurationService) SetAuthPreference(ctx context.Context, pre
 	}
 
 	item := backend.Item{
-		Key:   backend.Key(authPrefix, preferencePrefix, generalPrefix),
-		Value: value,
-		ID:    preferences.GetResourceID(),
+		Key:      backend.Key(authPrefix, preferencePrefix, generalPrefix),
+		Value:    value,
+		ID:       preferences.GetResourceID(),
+		Revision: preferences.GetRevision(),
 	}
 
-	_, err = s.Put(ctx, item)
-	if err != nil {
+	if cb, ok := s.Backend.(backend.ConditionalBackend); ok {
+		_, err := cb.ConditionalPut(ctx, item)
+		if trace.IsCompareFailed(err) {
+			return trace.CompareFailed("detected concurrent modification of cluster auth preferences, refetch and try updating again")
+		}
 		return trace.Wrap(err)
 	}
 
-	return nil
+	_, err = s.Put(ctx, item)
+	return trace.Wrap(err)
 }
 
 // DeleteAuthPreference deletes types.AuthPreference from the backend.

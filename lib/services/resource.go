@@ -42,6 +42,8 @@ type MarshalConfig struct {
 
 	// Expires is an optional expiry time
 	Expires time.Time
+
+	Revision string
 }
 
 // GetVersion returns explicitly provided version or sets latest as default
@@ -99,6 +101,14 @@ func WithVersion(v string) MarshalOption {
 		default:
 			return trace.BadParameter("version '%v' is not supported", v)
 		}
+	}
+}
+
+// WithRevision sets marshal revision
+func WithRevision(rev string) MarshalOption {
+	return func(c *MarshalConfig) error {
+		c.Revision = rev
+		return nil
 	}
 }
 

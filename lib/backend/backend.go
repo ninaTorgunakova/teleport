@@ -89,6 +89,12 @@ type Backend interface {
 	CloseWatchers()
 }
 
+type ConditionalBackend interface {
+	ConditionalPut(ctx context.Context, i Item) (*Lease, error)
+	ConditionalUpdate(ctx context.Context, i Item) (*Lease, error)
+	ConditionalDelete(ctx context.Context, key []byte, revision string) error
+}
+
 // IterateRange is a helper for stepping over a range
 func IterateRange(ctx context.Context, bk Backend, startKey []byte, endKey []byte, limit int, fn func([]Item) (stop bool, err error)) error {
 	for {
@@ -226,6 +232,8 @@ type Item struct {
 	// LeaseID is a lease ID, could be set on objects
 	// with TTL
 	LeaseID int64
+	// Revision of the item
+	Revision string
 }
 
 func (e Event) String() string {

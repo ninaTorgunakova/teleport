@@ -3605,6 +3605,11 @@ func (g *GRPCServer) SetAuthPreference(ctx context.Context, authPref *types.Auth
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+
+	if authPref.GetRevision() == "" {
+		return &emptypb.Empty{}, trace.BadParameter("required field revision was not provided")
+	}
+
 	authPref.SetOrigin(types.OriginDynamic)
 	if err = auth.ServerWithRoles.SetAuthPreference(ctx, authPref); err != nil {
 		return nil, trace.Wrap(err)
