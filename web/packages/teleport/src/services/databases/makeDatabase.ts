@@ -29,6 +29,8 @@ export function makeDatabase(json: any): Database {
     rds = {
       rds: {
         resourceId: aws.rds.resource_id,
+        region: aws.rds.region,
+        subnets: aws.rds.subnets,
       },
     };
   }

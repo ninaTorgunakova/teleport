@@ -24,12 +24,12 @@ import { clearCachedJoinTokenResult } from 'teleport/Discover/Shared/useJoinToke
 import { PingTeleportProvider } from 'teleport/Discover/Shared/PingTeleportContext';
 import { getUserContext } from 'teleport/mocks/contexts';
 
-import DownloadScript from './DownloadScript';
+import ManualDeploy from './ManualDeploy';
 
 const { worker, rest } = window.msw;
 
 export default {
-  title: 'Teleport/Discover/Database/DownloadScript',
+  title: 'Teleport/Discover/Database/Deploy/Manual',
   decorators: [
     Story => {
       // Reset request handlers added in individual stories.
@@ -43,7 +43,7 @@ export default {
 export const Init = () => {
   return (
     <Provider>
-      <DownloadScript {...props} />
+      <ManualDeploy {...props} />
     </Provider>
   );
 };
@@ -51,7 +51,7 @@ export const Init = () => {
 export const InitWithLabels = () => {
   return (
     <Provider>
-      <DownloadScript
+      <ManualDeploy
         {...props}
         agentMeta={{
           ...props.agentMeta,
@@ -75,7 +75,7 @@ export const Polling = () => {
   );
   return (
     <Provider>
-      <DownloadScript {...props} />
+      <ManualDeploy {...props} />
     </Provider>
   );
 };
@@ -90,7 +90,7 @@ export const PollingSuccess = () => {
   );
   return (
     <Provider interval={5}>
-      <DownloadScript {...props} />
+      <ManualDeploy {...props} />
     </Provider>
   );
 };
@@ -105,7 +105,7 @@ export const PollingError = () => {
   );
   return (
     <Provider timeout={50}>
-      <DownloadScript {...props} />
+      <ManualDeploy {...props} />
     </Provider>
   );
 };
@@ -117,7 +117,7 @@ export const Processing = () => {
   );
   return (
     <Provider interval={5}>
-      <DownloadScript {...props} />
+      <ManualDeploy {...props} />
     </Provider>
   );
 };
@@ -130,7 +130,7 @@ export const Failed = () => {
   );
   return (
     <Provider>
-      <DownloadScript {...props} />
+      <ManualDeploy {...props} />
     </Provider>
   );
 };

@@ -18,10 +18,10 @@ import { DbProtocol } from 'shared/services/databases';
 
 import { AgentLabel } from 'teleport/services/agents';
 
-import { RdsEngine } from '../integrations';
+import { RdsEngine, Regions } from '../integrations';
 
 export type Aws = {
-  rds?: { resourceId: string };
+  rds?: { resourceId: string; region: Regions; subnets: string[] };
 };
 
 export interface Database {

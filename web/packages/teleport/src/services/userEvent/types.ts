@@ -173,6 +173,8 @@ export type DiscoverEventData = DiscoverEventStepStatus & {
   // in the RDS enrollment screen for event
   // tp.ui.discover.database.enroll.rds
   selectedResourcesCount?: number;
+
+  deployMethod?: 'auto' | 'manual'; // TODO(lisa)
 };
 
 export type DiscoverEventStepStatus = {

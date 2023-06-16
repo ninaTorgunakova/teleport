@@ -49,6 +49,14 @@ export interface ResourceViewConfig<T = any> {
 export interface View {
   title: string;
   component?: AgentStepComponent;
+  // altComponent defines an alternate component. It can define
+  // a different set of directions the user can take to achieve
+  // the same result that this step (View) is trying to accomplish.
+  // Eg: For adding RDS databases, in the `Deploy a Service` step (View)
+  // the default View would be to automatically deploy a service for the user
+  // and the alternate View would be for the user to manually deploy
+  // their own service.
+  altComponent?: AgentStepComponent;
   hide?: boolean;
   index?: number;
   views?: View[];

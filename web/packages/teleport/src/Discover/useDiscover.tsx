@@ -68,6 +68,7 @@ type CustomEventInput = {
   eventResourceName?: DiscoverEventResource;
   autoDiscoverResourcesCount?: number;
   selectedResourcesCount?: number;
+  deployMethod?: 'auto' | 'manual' | null; // TODO(lisa)
 };
 
 type DiscoverProviderProps = {
@@ -121,6 +122,7 @@ export function DiscoverProvider(
           resource: custom?.eventResourceName || resourceSpec?.event,
           autoDiscoverResourcesCount: custom?.autoDiscoverResourcesCount,
           selectedResourcesCount: custom?.selectedResourcesCount,
+          deployMethod: custom?.deployMethod,
           ...status,
         },
       });

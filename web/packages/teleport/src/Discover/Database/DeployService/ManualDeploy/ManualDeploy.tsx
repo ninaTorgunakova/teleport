@@ -38,9 +38,13 @@ import {
 } from 'teleport/Discover/Shared/HintBox';
 
 import { CommandBox } from 'teleport/Discover/Shared/CommandBox';
+import { useDiscover } from 'teleport/Discover/useDiscover';
+import { DatabaseLocation } from 'teleport/Discover/SelectResource';
+import { DiscoverEventStatus } from 'teleport/services/userEvent';
 
 import {
   ActionButtons,
+  AlternateInstructionButton,
   DiscoverLabel,
   Header,
   HeaderSubtitle,
@@ -49,14 +53,16 @@ import {
   ResourceKind,
   TextIcon,
   useShowHint,
-} from '../../Shared';
-import { matchLabels } from '../util';
+} from '../../../Shared';
+import { matchLabels } from '../../util';
+import { DeployServiceProp } from '../DeployService';
 
-import type { AgentStepProps } from '../../types';
-
-export default function Container(props: AgentStepProps) {
-  const hasDbLabels = props.agentMeta?.agentMatcherLabels?.length;
-  const dbLabels = hasDbLabels ? props.agentMeta.agentMatcherLabels : [];
+export default function Container({
+  toggleDeployMethod,
+}: Partial<DeployServiceProp>) {
+  const { agentMeta } = useDiscover();
+  const hasDbLabels = agentMeta?.agentMatcherLabels?.length;
+  const dbLabels = hasDbLabels ? agentMeta.agentMatcherLabels : [];
   const [labels, setLabels] = useState<DiscoverLabel[]>(
     // TODO(lisa): we will always be defaulting to asterisks, so
     // instead of defining the default here, define it inside
@@ -69,6 +75,8 @@ export default function Container(props: AgentStepProps) {
 
   const labelProps = { labels, setLabels, dbLabels };
 
+  const heading = <Heading toggleDeployMethod={toggleDeployMethod} />;
+
   return (
     <Validation>
       {({ validator }) => (
@@ -76,7 +84,7 @@ export default function Container(props: AgentStepProps) {
           onRetry={() => clearCachedJoinTokenResult(ResourceKind.Database)}
           fallbackFn={fbProps => (
             <Box>
-              <Heading />
+              {heading}
               <Labels {...labelProps} />
               <Box>
                 <TextIcon mt={3}>
@@ -91,20 +99,24 @@ export default function Container(props: AgentStepProps) {
           <Suspense
             fallback={
               <Box>
-                <Heading />
+                {heading}
                 <Labels {...labelProps} disableBtns={true} />
                 <ActionButtons onProceed={() => null} disableProceed={true} />
               </Box>
             }
           >
             {!showScript && (
-              <LoadedView {...labelProps} setShowScript={setShowScript} />
+              <LoadedView
+                {...labelProps}
+                setShowScript={setShowScript}
+                toggleDeployMethod={toggleDeployMethod}
+              />
             )}
             {showScript && (
-              <DownloadScript
-                {...props}
+              <ManualDeploy
                 {...labelProps}
                 validator={validator}
+                toggleDeployMethod={toggleDeployMethod}
               />
             )}
           </Suspense>
@@ -114,14 +126,15 @@ export default function Container(props: AgentStepProps) {
   );
 }
 
-export function DownloadScript(
-  props: AgentStepProps & {
-    labels: AgentLabel[];
-    setLabels(l: AgentLabel[]): void;
-    dbLabels: AgentLabel[];
-    validator: Validator;
-  }
-) {
+export function ManualDeploy(props: {
+  labels: AgentLabel[];
+  setLabels(l: AgentLabel[]): void;
+  dbLabels: AgentLabel[];
+  validator: Validator;
+  toggleDeployMethod(): void;
+}) {
+  const { agentMeta, updateAgentMeta, nextStep, emitEvent } = useDiscover();
+
   // Fetches join token.
   const { joinToken } = useJoinTokenSuspender(
     ResourceKind.Database,
@@ -129,19 +142,21 @@ export function DownloadScript(
   );
 
   // Starts resource querying interval.
-  const { active, result } = usePingTeleport<Database>(
-    props.agentMeta.resourceName
-  );
+  const { active, result } = usePingTeleport<Database>(agentMeta.resourceName);
 
   const showHint = useShowHint(active);
 
   function handleNextStep() {
-    props.updateAgentMeta({
-      ...props.agentMeta,
+    updateAgentMeta({
+      ...agentMeta,
       resourceName: result.name,
       db: result,
     });
-    props.nextStep();
+    nextStep();
+    emitEvent(
+      { stepStatus: DiscoverEventStatus.Success },
+      { deployMethod: 'manual' } // TODO(lisa)
+    );
   }
 
   let hint;
@@ -193,7 +208,7 @@ export function DownloadScript(
 
   return (
     <Box>
-      <Heading />
+      <Heading toggleDeployMethod={props.toggleDeployMethod} />
       <Labels
         labels={props.labels}
         setLabels={props.setLabels}
@@ -216,14 +231,24 @@ export function DownloadScript(
   );
 }
 
-const Heading = () => {
+const Heading = ({ toggleDeployMethod }: { toggleDeployMethod(): void }) => {
+  const { resourceSpec } = useDiscover();
+  const isAwsRds = resourceSpec.dbMeta?.location === DatabaseLocation.Aws;
+  const canChangeDeployMethod = isAwsRds && toggleDeployMethod;
+
   return (
     <>
-      <Header>Deploy a Database Service</Header>
+      <Header>Manually Deploy a Database Service</Header>
       <HeaderSubtitle>
         On the host where you will run the Teleport Database Service, execute
         the generated command that will install and start Teleport with the
         appropriate configuration.
+        {canChangeDeployMethod && (
+          <>
+            <br /> Want us to deploy the database service for you?{' '}
+            <AlternateInstructionButton onClick={toggleDeployMethod} />
+          </>
+        )}
       </HeaderSubtitle>
     </>
   );
@@ -332,7 +357,13 @@ export function hasMatchingLabels(
   return matchLabels(dbLabels, matcherLabels);
 }
 
-function LoadedView({ labels, setLabels, dbLabels, setShowScript }) {
+function LoadedView({
+  labels,
+  setLabels,
+  dbLabels,
+  setShowScript,
+  toggleDeployMethod,
+}) {
   const [showLabelMatchErr, setShowLabelMatchErr] = useState(true);
 
   useEffect(() => {
@@ -354,7 +385,7 @@ function LoadedView({ labels, setLabels, dbLabels, setShowScript }) {
 
   return (
     <Box>
-      <Heading />
+      <Heading toggleDeployMethod={toggleDeployMethod} />
       <Labels
         labels={labels}
         setLabels={setLabels}

@@ -35,6 +35,7 @@ function DiscoverContent() {
     viewConfig,
     onSelectResource,
     indexedViews,
+    wantAltComp,
     ...agentProps
   } = useDiscover();
 
@@ -43,7 +44,10 @@ function DiscoverContent() {
   if (hasSelectedResource) {
     const view = findViewAtIndex(indexedViews, currentStep);
 
-    const Component = view.component;
+    let Component = view.component;
+    if (wantAltComp) {
+      Component = view.altComponent;
+    }
 
     content = <Component {...agentProps} />;
 

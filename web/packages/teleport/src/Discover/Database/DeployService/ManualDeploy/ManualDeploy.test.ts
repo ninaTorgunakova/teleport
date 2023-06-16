@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { hasMatchingLabels } from './DownloadScript';
+import { hasMatchingLabels } from './ManualDeploy';
 
 const dbLabels = [
   { name: 'os', value: 'mac' },
